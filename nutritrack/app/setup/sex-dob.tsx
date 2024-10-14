@@ -7,20 +7,26 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { LinearGradient } from 'expo-linear-gradient';  
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function GenderDobScreen() {
-  // gender: 'male' | 'female' | 'other' | ''
   const [gender, setGender] = useState<string>('');
   const [dob, setDob] = useState<Date | null>(null);
+
+  // Modal control
   const [showPicker, setShowPicker] = useState(false);
 
   const onChange = (_: DateTimePickerEvent, selected?: Date) => {
-    setShowPicker(false);
+    if (Platform.OS !== 'ios') {
+      // Android: picker closes automatically
+      setShowPicker(false);
+    }
     if (selected) setDob(selected);
   };
 
@@ -28,9 +34,7 @@ export default function GenderDobScreen() {
 
   const handleContinue = () => {
     if (!isValid) return;
-    // await AsyncStorage.setItem('onboard.gender', gender)
-    // await AsyncStorage.setItem('onboard.dob', dob.toISOString())
-    router.replace('/setup/physical-stats'); // step 3
+    router.replace('/setup/physical-stats');
   };
 
   return (
@@ -45,7 +49,6 @@ export default function GenderDobScreen() {
         <Text style={styles.headerTitle}>Tell us about you</Text>
         <Text style={styles.headerSubtitle}>Select your gender and date of birth</Text>
 
-        {/* progress (2/6) */}
         <View style={styles.progressRow}>
           <View style={[styles.progressBar, styles.progressActive]} />
           <View style={[styles.progressBar, styles.progressActive]} />
@@ -57,8 +60,8 @@ export default function GenderDobScreen() {
 
       {/* Content */}
       <View style={styles.content}>
+        {/* Gender */}
         <Text style={styles.sectionLabel}>Gender / Sex</Text>
-
         <View style={styles.cardRow}>
           <Pressable
             onPress={() => setGender('male')}
@@ -103,31 +106,19 @@ export default function GenderDobScreen() {
           </Pressable>
         </View>
 
+        {/* DOB */}
         <Text style={[styles.sectionLabel, { marginTop: 18 }]}>Date of Birth</Text>
 
-        <Pressable
-          style={styles.dateButton}
-          onPress={() => setShowPicker(true)}
-        >
+        <Pressable style={styles.dateButton} onPress={() => setShowPicker(true)}>
           <Ionicons name="calendar-outline" size={20} color="#1E90D6" />
           <Text style={styles.dateText}>
             {dob ? dob.toDateString() : 'Select your date of birth'}
           </Text>
           <Ionicons name="chevron-down" size={18} color="#94A3B8" />
         </Pressable>
-
-        {showPicker && (
-          <DateTimePicker
-            value={dob ?? new Date(2000, 0, 1)}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={onChange}
-          />
-        )}
       </View>
 
-      {/* Footer CTA */}
+      {/* Footer */}
       <View style={styles.footer}>
         <LinearGradient
           colors={isValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
@@ -148,6 +139,39 @@ export default function GenderDobScreen() {
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
       </View>
+
+      {/* Date Picker Modal */}
+      {showPicker && (
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPressOut={() => setShowPicker(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <LinearGradient
+                colors={['#4CA1DE', '#1E90D6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.pickerGradient}
+              >
+                <View style={styles.pickerInner}>
+                  <DateTimePicker
+                    value={dob ?? new Date(2000, 0, 1)}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    onChange={onChange}
+                    themeVariant="light"
+                    textColor="black"
+                    style={styles.picker}
+                  />
+                </View>
+              </LinearGradient>
+            </View>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -156,21 +180,21 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 8 },
   header: { alignItems: 'center', marginTop: 60, marginBottom: 10 },
   iconCircle: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#1E90D6',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
   headerTitle: { fontSize: 22, color: '#0B2C5E', fontWeight: '700', textAlign: 'center' },
   headerSubtitle: { fontSize: 14, color: '#4CA1DE', textAlign: 'center', marginTop: 4 },
-
   progressRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
   progressBar: { width: 36, height: 6, backgroundColor: '#E5E7EB', borderRadius: 999 },
   progressActive: { backgroundColor: '#1E90D6' },
-
   content: { flex: 1, marginTop: 16 },
   sectionLabel: { color: '#0B2C5E', fontWeight: '700', marginBottom: 8 },
-
   cardRow: { flexDirection: 'row', gap: 10 },
   card: {
     flex: 1,
@@ -185,7 +209,6 @@ const styles = StyleSheet.create({
   cardActive: { borderColor: '#1E90D6', backgroundColor: '#EFF6FF' },
   cardText: { color: '#64748B', fontWeight: '600' },
   cardTextActive: { color: '#0B2C5E' },
-
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,10 +221,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   dateText: { flex: 1, color: '#0F172A', fontSize: 16 },
-
   footer: { paddingBottom: 24, alignItems: 'center' },
   ctaWrap: { width: '100%', borderRadius: 14, overflow: 'hidden' },
   ctaButton: { paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
   backLink: { color: '#1E90D6', fontWeight: '700', textDecorationLine: 'underline' },
+
+  // Modal overlay
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalContent: {
+    width: '90%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+
+  pickerGradient: {
+    padding: 12,
+    borderRadius: 16,
+    width: '100%',
+  },
+
+  pickerInner: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 12,
+    padding: 6,
+  },
+
+  picker: {
+    backgroundColor: 'transparent',
+    width: '100%',
+    height: 200,
+  },
 });
