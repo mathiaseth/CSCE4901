@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '@/constants/api';
@@ -14,6 +23,7 @@ export default function Login() {
       Alert.alert('Missing info', 'Please enter your email and password.');
       return;
     }
+
     try {
       setLoading(true);
       const res = await fetch(`${BASE_URL}/api/users/login`, {
@@ -21,14 +31,15 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.message || 'Login failed');
-      }
+      if (!res.ok) throw new Error(data?.message || 'Login failed');
+
       await AsyncStorage.setItem('authToken', data.token);
       await AsyncStorage.setItem('userName', data.user?.name || '');
+
       router.replace('/(tabs)');
-    } catch (err:any) {
+    } catch (err: any) {
       Alert.alert('Login error', err.message);
     } finally {
       setLoading(false);
@@ -40,7 +51,11 @@ export default function Login() {
       <View style={styles.header}>
         <Text style={styles.welcome}>Welcome Back</Text>
         <Text style={styles.toNutriFit}>to NutriFit</Text>
-        <Image source={require('@/assets/images/apple.png')} style={styles.apple} resizeMode="contain" />
+        <Image
+          source={require('@/assets/images/apple.png')}
+          style={styles.apple}
+          resizeMode="contain"
+        />
       </View>
 
       <View style={styles.form}>
@@ -62,7 +77,10 @@ export default function Login() {
           style={styles.input}
         />
 
-        <Pressable onPress={() => Alert.alert('Forgot Password', 'Feature coming soon')} style={styles.forgotWrap}>
+        <Pressable
+          onPress={() => Alert.alert('Forgot Password', 'Feature coming soon')}
+          style={styles.forgotWrap}
+        >
           <Text style={styles.forgot}>Forgot Password?</Text>
         </Pressable>
 
@@ -71,8 +89,8 @@ export default function Login() {
         </Pressable>
 
         <View style={styles.signupRow}>
-          <Text style={styles.smallText}>Don&apos;t have an account?</Text>
-          <Pressable onPress={() => router.push('/(onboarding)')}>
+          <Text style={styles.smallText}>Don't have an account?</Text>
+          <Pressable onPress={() => router.push('/signup')}>
             <Text style={styles.link}> Sign Up</Text>
           </Pressable>
         </View>
@@ -82,16 +100,38 @@ export default function Login() {
 }
 
 const BLUE = '#26A9E1';
-const LIGHT_BLUE = '#6ED3F6';
 const WHITE = '#ffffff';
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLUE, paddingHorizontal: 24, paddingTop: 80 },
-  header: { alignItems: 'center', marginBottom: 28 },
-  welcome: { fontSize: 28, fontWeight: '800', color: WHITE, marginBottom: 2 },
-  toNutriFit: { fontSize: 12, color: WHITE, opacity: 0.9 },
-  apple: { width: 140, height: 140, marginTop: 16 },
-  form: { marginTop: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: BLUE,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  welcome: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: WHITE,
+    marginBottom: 2,
+  },
+  toNutriFit: {
+    fontSize: 12,
+    color: WHITE,
+    opacity: 0.9,
+  },
+  apple: {
+    width: 140,
+    height: 140,
+    marginTop: 16,
+  },
+  form: {
+    marginTop: 12,
+  },
   input: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 10,
@@ -102,8 +142,15 @@ const styles = StyleSheet.create({
     color: WHITE,
     marginBottom: 12,
   },
-  forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
-  forgot: { color: WHITE, opacity: 0.9, fontSize: 12 },
+  forgotWrap: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  forgot: {
+    color: WHITE,
+    opacity: 0.9,
+    fontSize: 12,
+  },
   btn: {
     backgroundColor: WHITE,
     paddingVertical: 14,
@@ -115,8 +162,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  btnText: { color: BLUE, fontWeight: '800', fontSize: 16 },
-  signupRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 14 },
-  smallText: { color: WHITE, opacity: 0.9, fontSize: 12 },
-  link: { color: WHITE, fontWeight: '700', fontSize: 12 },
+  btnText: {
+    color: BLUE,
+    fontWeight: '800',
+    fontSize: 16,
+  },
+  signupRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  smallText: {
+    color: WHITE,
+    opacity: 0.9,
+    fontSize: 12,
+  },
+  link: {
+    color: WHITE,
+    fontWeight: '700',
+    fontSize: 12,
+  },
 });
