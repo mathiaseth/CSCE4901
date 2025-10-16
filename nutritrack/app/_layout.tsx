@@ -31,11 +31,11 @@ export default function RootLayout() {
     const inOnboarding = segments[0] === '(onboarding)';
     const inTabs = segments[0] === '(tabs)';
     const inLogin = segments[0] === 'login';
+    const inSignup = segments[0] === 'signup';
 
-    // Routing logic
     if (!seen && !inOnboarding) {
       router.replace('/(onboarding)');
-    } else if (seen && !loggedIn && !inLogin) {
+    } else if (seen && !loggedIn && !inLogin && !inSignup) {
       router.replace('/login');
     } else if (seen && loggedIn && !inTabs) {
       router.replace('/(tabs)');
