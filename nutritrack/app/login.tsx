@@ -1,3 +1,5 @@
+// app/login.tsx
+import React from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 
@@ -9,12 +11,13 @@ export default function Login() {
       <TextInput placeholder="Email" style={styles.input} autoCapitalize="none" />
       <TextInput placeholder="Password" style={styles.input} secureTextEntry />
 
-      <Pressable style={styles.btn} onPress={() => router.replace('/(tabs)')}>
+      <Pressable style={styles.btn} onPress={() => router.replace('/(tabs)/dashboard')}>
         <Text style={styles.btnText}>Continue</Text>
       </Pressable>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: 'center', gap: 12, backgroundColor: '#fff' },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 12 },

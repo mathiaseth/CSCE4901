@@ -2,37 +2,46 @@
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { hasSeenOnboarding } from '@/lib/onboarding';
+import { useFonts, Kavoon_400Regular } from '@expo-google-fonts/kavoon';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
-  const [seen, setSeen] = useState<boolean | null>(null);
+  const [fontsLoaded] = useFonts({ Kavoon_400Regular });
+  const [storageReady, setStorageReady] = useState(false);
 
-  const segments = useSegments();
-  const router = useRouter();
-
+  // You’re forcing onboarding for now
   useEffect(() => {
     (async () => {
       try {
-        setSeen(await hasSeenOnboarding());
+        // pretend onboarding has NOT been seen (for dev)
       } finally {
-        setReady(true);
+        setStorageReady(true);
       }
     })();
   }, []);
 
+  const appReady = fontsLoaded && storageReady;
+
+  const segments = useSegments();
+  const router = useRouter();
+
+  // 👇 Allow /login to be visited; force all other routes to onboarding
   useEffect(() => {
-    if (!ready || seen === null) return;
+    if (!appReady) return;
 
     const inOnboarding = segments[0] === '(onboarding)';
+    const isLogin = segments[0] === 'login';
 
-    // Only navigate when you’re on the wrong group
-    if (!seen && !inOnboarding) {
+    if (!inOnboarding && !isLogin) {
       router.replace('/(onboarding)');
-    } else if (seen && inOnboarding) {
-      router.replace('/(tabs)');
     }
-  }, [ready, seen, segments]);
+  }, [appReady, segments, router]);
 
-  // Render the current route tree (onboarding or tabs)
-  return ready ? <Slot /> : null;
+  useEffect(() => {
+    if (appReady) SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
+
+  return appReady ? <Slot /> : null;
 }

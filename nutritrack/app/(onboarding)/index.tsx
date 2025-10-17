@@ -1,112 +1,124 @@
+// app/(onboarding)/index.tsx
+
 import React from 'react';
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Image, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingSeen } from '@/lib/onboarding';
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+
   // When user taps "Get Started"
   const handleStart = async () => {
-    await markOnboardingSeen(); // save onboarding completion
-    router.replace('/(tabs)');  // navigate to main app
+    await markOnboardingSeen(); // Save onboarding completion
+    router.replace('/(tabs)/dashboard'); // ✅ navigate to your real tab screen
   };
 
   // When user taps "Login"
   const handleLogin = () => {
-    router.push('/login'); // route to login (once you add that page)
+    router.push('/login'); // route to login page (root-level)
   };
 
   return (
     <View style={styles.container}>
-      {/* App title */}
-      <Text style={styles.title}>NutriFit</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Apple illustration */}
+      {/* Logo */}
       <Image
-        source={require('@/assets/images/apple.png')} // export from Figma
+        source={require('@/assets/images/Logo.png')}
         style={styles.image}
         resizeMode="contain"
       />
 
       {/* Tagline */}
       <Text style={styles.subtitle}>
-        Easy to Track{'\n'}
-        Easy to Reach{'\n'}
-        Easy to Crack
+        Welcome to NutriFit, where nutrition goals are made for your fit.
       </Text>
 
-      {/* Get Started button */}
-      <Pressable style={styles.button} onPress={handleStart}>
-        <Text style={styles.buttonText}>Get Started</Text>
-      </Pressable>
+      {/* Bottom Blue Block */}
+      <LinearGradient
+        colors={['#4CA1DE', '#1E90D6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          styles.bottomBlock,
+          { paddingBottom: Math.max(insets.bottom, 20) },
+        ]}
+      >
+        <Pressable style={styles.ctaButton} onPress={handleStart}>
+          <Text style={styles.ctaText}>GET STARTED</Text>
+        </Pressable>
 
-      {/* Footer with login link */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Already have an account?{' '}
-          <Text style={styles.loginLink} onPress={handleLogin}>
-            Login
+        <Pressable onPress={handleLogin} style={styles.loginRow}>
+          <Text style={styles.footerText}>
+            Already have an account? <Text style={styles.loginLink}>Login</Text>
           </Text>
-        </Text>
-      </View>
+        </Pressable>
+      </LinearGradient>
     </View>
   );
 }
 
-// Styles — matching the figma design
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#26A9E1', // blue background for the frame
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 40,
   },
   image: {
-    width: 160,
-    height: 160,
-    marginBottom: 40,
+    width: 370,
+    height: 120,
+    marginTop: 200,
+    marginBottom: 20,
   },
   subtitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: '#4CA1DE',
+    fontSize: 16,
     textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 60,
+    lineHeight: 22,
+    marginBottom: 24,
+    fontFamily: 'Kavoon_400Regular', 
   },
-  button: {
-    backgroundColor: '#26A9E1', // matches background
-    borderColor: '#FFFFFF',
-    borderWidth: 2,
-    borderRadius: 12,
+  bottomBlock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 180,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaButton: {
+    width: '100%',
+    borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: 40,
-    marginBottom: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.7)',
+    marginBottom: 12,
   },
-  buttonText: {
+  ctaText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 40,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-  },
-  footerText: {
-    color: '#1E293B',
-    fontSize: 14,
-  },
-  loginLink: {
-    color: '#26A9E1',
     fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  loginRow: { paddingVertical: 6, paddingHorizontal: 8 },
+  footerText: { color: 'rgba(255,255,255,0.95)', fontSize: 14 },
+  loginLink: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
