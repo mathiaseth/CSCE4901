@@ -30,20 +30,22 @@ export default function RootLayout() {
 
   const appReady = fontsLoaded && storageReady;
 
-  // Guard: allow /login; force all others to onboarding
+  // Force all others to onboarding
   const segments = useSegments();
   const router = useRouter();
   useEffect(() => {
-    if (!appReady) return;
+  if (!appReady) return;
 
-    const inOnboarding = segments[0] === '(onboarding)';
-    const isLogin = segments[0] === 'login';
-    const isSignup = segments[0] === 'signup';
+  const seg0 = segments[0];              
+  const inOnboarding = seg0 === '(onboarding)';
+  const isLogin = seg0 === 'login';
+  const isSignup = seg0 === 'signup';     // ✅ allow signup
 
-    if (!inOnboarding && !isLogin) {
-      router.replace('/(onboarding)');
-    }
-  }, [appReady, segments, router]);
+  // Force everything except onboarding/login/signup back to onboarding
+  if (!inOnboarding && !isLogin && !isSignup) {
+    router.replace('/(onboarding)');
+  }
+}, [appReady, segments, router]);
 
   useEffect(() => {
     if (appReady) SplashScreen.hideAsync().catch(() => {});

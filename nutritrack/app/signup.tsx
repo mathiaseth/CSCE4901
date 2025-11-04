@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons'; // 👈 Import icon set
+import { Ionicons } from '@expo/vector-icons'; // Import icon set
 
 export default function SignUpScreen() {
   const [name, setName] = useState('');
@@ -21,7 +21,7 @@ export default function SignUpScreen() {
   const [pwd, setPwd] = useState('');
   const [confirm, setConfirm] = useState('');
   const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
-  const [showPwd, setShowPwd] = useState(false); // 👈 password visibility
+  const [showPwd, setShowPwd] = useState(false); // password visibility
   const [showConfirm, setShowConfirm] = useState(false);
 
   // ── Basic validators
