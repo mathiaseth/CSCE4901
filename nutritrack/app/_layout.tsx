@@ -29,16 +29,17 @@ export default function RootLayout() {
   const router = useRouter();
 
   // 👇 Allow /login to be visited; force all other routes to onboarding
-  useEffect(() => {
-    if (!appReady) return;
+ useEffect(() => {
+  if (!appReady) return;
 
-    const inOnboarding = segments[0] === '(onboarding)';
-    const isLogin = segments[0] === 'login';
+  const inOnboarding = segments[0] === '(onboarding)';
+  const isLogin = segments[0] === 'login';
+  const isSignup = segments[0] === 'signup';   // ✅ allow signup
 
-    if (!inOnboarding && !isLogin) {
-      router.replace('/(onboarding)');
-    }
-  }, [appReady, segments, router]);
+  if (!inOnboarding && !isLogin && !isSignup) {
+    router.replace('/(onboarding)');
+  }
+}, [appReady, segments, router]);
 
   useEffect(() => {
     if (appReady) SplashScreen.hideAsync().catch(() => {});

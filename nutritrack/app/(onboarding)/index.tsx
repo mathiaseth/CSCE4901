@@ -13,7 +13,7 @@ export default function OnboardingScreen() {
   // When user taps "Get Started"
   const handleStart = async () => {
     await markOnboardingSeen(); // Save onboarding completion
-    router.replace('/(tabs)'); // Navigate to the main tabs screen
+    router.replace('/signup'); // Navigate to the signup screen
   };
 
   // When user taps "Login"
