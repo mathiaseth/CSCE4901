@@ -2,13 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { hasSeenOnboarding } from '@/lib/onboarding';
-import { useFonts, Kavoon_400Regular } from '@expo-google-fonts/kavoon';
+import { useFonts, MomoTrustDisplay_400Regular } from '@expo-google-fonts/momo-trust-display';
+import { Kavoon_400Regular } from '@expo-google-fonts/kavoon';
 import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Kavoon_400Regular });
+  const [fontsLoaded] = useFonts({ MomoTrustDisplay_400Regular, Kavoon_400Regular });
   const [storageReady, setStorageReady] = useState(false);
 
   // You’re forcing onboarding for now

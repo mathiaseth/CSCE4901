@@ -13,7 +13,7 @@ export default function OnboardingScreen() {
   // When user taps "Get Started"
   const handleStart = async () => {
     await markOnboardingSeen(); // Save onboarding completion
-    router.replace('/(tabs)/dashboard'); // ✅ navigate to your real tab screen
+    router.replace('/(tabs)'); // Navigate to the main tabs screen
   };
 
   // When user taps "Login"
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
-    fontFamily: 'Kavoon_400Regular', 
+    fontFamily: 'momoTrustDisplay-Regular', 
   },
   bottomBlock: {
     position: 'absolute',
