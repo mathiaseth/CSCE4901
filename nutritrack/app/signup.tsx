@@ -1,175 +1,228 @@
-import { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
   StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
-import { BASE_URL } from '@/constants/api';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons'; // 👈 Import icon set
 
-export default function SignUp() {
-  const [fullName, setFullName] = useState('');
+export default function SignUpScreen() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [pwd, setPwd] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
+  const [showPwd, setShowPwd] = useState(false); // 👈 password visibility
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  const onSignUp = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert('Missing Info', 'Please fill out all fields.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match.');
-      return;
-    }
+  // ── Basic validators
+  const emailOk = useMemo(() => /\S+@\S+\.\S+/.test(email), [email]);
+  const pwdOk = useMemo(() => pwd.length >= 8, [pwd]);
+  const confirmOk = useMemo(() => confirm === pwd && confirm.length > 0, [confirm, pwd]);
+  const nameOk = useMemo(() => name.trim().length >= 2, [name]);
+  const formValid = nameOk && emailOk && pwdOk && confirmOk;
 
-    try {
-      setLoading(true);
-      const res = await fetch(`${BASE_URL}/api/users/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: fullName, email, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Sign Up failed');
-
-      Alert.alert('Success', 'Account created successfully!');
-      router.replace('/login');
-    } catch (err: any) {
-      Alert.alert('Sign Up Error', err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleContinue = async () => {
+    //router.replace('/setup/personal-info');
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>For NutriFit</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#fff' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>Let’s get a few details to personalize NutriTrack.</Text>
 
-      <TextInput
-        placeholder="Full Name"
-        placeholderTextColor="#6ED3F6"
-        style={styles.input}
-        value={fullName}
-        onChangeText={setFullName}
-      />
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#6ED3F6"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor="#6ED3F6"
-        secureTextEntry
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-      />
-      <TextInput
-        placeholder="Confirm Password"
-        placeholderTextColor="#6ED3F6"
-        secureTextEntry
-        style={styles.input}
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
+          {/* Name */}
+          <TextInput
+            placeholder="Full name"
+            value={name}
+            onChangeText={setName}
+            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+            style={[styles.input, !nameOk && touched.name ? styles.inputError : null]}
+            placeholderTextColor="#9CA3AF"
+          />
+          {!nameOk && touched.name && (
+            <Text style={styles.errorText}>Please enter your name.</Text>
+          )}
 
-      <Text style={styles.terms}>I agree to the Terms & Conditions</Text>
+          {/* Email */}
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={[styles.input, !emailOk && touched.email ? styles.inputError : null]}
+            placeholderTextColor="#9CA3AF"
+          />
+          {!emailOk && touched.email && (
+            <Text style={styles.errorText}>Enter a valid email address.</Text>
+          )}
 
-      <Pressable style={styles.btn} onPress={onSignUp} disabled={loading}>
-        {loading ? <ActivityIndicator /> : <Text style={styles.btnText}>Sign Up</Text>}
-      </Pressable>
+          {/* Password */}
+          <View style={[styles.inputContainer, !pwdOk && touched.pwd ? styles.inputError : null]}>
+            <TextInput
+              placeholder="Password (min 8 chars)"
+              value={pwd}
+              onChangeText={setPwd}
+              onBlur={() => setTouched((t) => ({ ...t, pwd: true }))}
+              secureTextEntry={!showPwd} // 👈 hide or show
+              style={styles.inputField}
+              placeholderTextColor="#9CA3AF"
+            />
+            <Pressable onPress={() => setShowPwd(!showPwd)}>
+              <Ionicons
+                name={showPwd ? 'eye-off-outline' : 'eye-outline'} // 👁 toggle
+                size={22}
+                color="#9CA3AF"
+              />
+            </Pressable>
+          </View>
+          {!pwdOk && touched.pwd && (
+            <Text style={styles.errorText}>Password must be at least 8 characters.</Text>
+          )}
 
-      <View style={styles.loginRow}>
-        <Text style={styles.smallText}>Already have an account?</Text>
-        <Pressable onPress={() => router.replace('/login')}>
-          <Text style={styles.link}> Login</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+          {/* Confirm Password */}
+          <View style={[styles.inputContainer, !confirmOk && touched.confirm ? styles.inputError : null]}>
+            <TextInput
+              placeholder="Confirm password"
+              value={confirm}
+              onChangeText={setConfirm}
+              onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+              secureTextEntry={!showConfirm}
+              style={styles.inputField}
+              placeholderTextColor="#9CA3AF"
+            />
+            <Pressable onPress={() => setShowConfirm(!showConfirm)}>
+              <Ionicons
+                name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color="#9CA3AF"
+              />
+            </Pressable>
+          </View>
+          {!confirmOk && touched.confirm && (
+            <Text style={styles.errorText}>Passwords do not match.</Text>
+          )}
+
+          {/* Continue Button */}
+          <LinearGradient
+            colors={formValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.ctaWrap}
+          >
+            <Pressable
+              style={[styles.ctaButton, !formValid && { opacity: 0.7 }]}
+              onPress={handleContinue}
+              disabled={!formValid}
+            >
+              <Text style={styles.ctaText}>Create Account</Text>
+            </Pressable>
+          </LinearGradient>
+
+          {/* Footer: Login link */}
+          <Text style={styles.footerText}>
+            Already have an account?{' '}
+            <Text style={styles.loginLink} onPress={() => router.push('/login')}>
+              Login
+            </Text>
+          </Text>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }
 
-const BLUE = '#26A9E1';
-const WHITE = '#ffffff';
-
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: BLUE,
-    paddingHorizontal: 24,
-    paddingTop: 80,
-    alignItems: 'center',
-  },
+  container: { flex: 1, padding: 24, gap: 10, justifyContent: 'center' },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: WHITE,
-    marginBottom: 4,
+    fontFamily: 'MomoTrustDisplay_400Regular',
+    fontSize: 28,
+    color: '#4CA1DE',
+    textAlign: 'center',
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 12,
-    color: WHITE,
-    opacity: 0.9,
-    marginBottom: 24,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    color: WHITE,
-    width: '100%',
-    marginBottom: 12,
-  },
-  terms: {
-    fontSize: 10,
-    color: WHITE,
-    opacity: 0.8,
+    fontFamily: 'Kavoon_400Regular',
+    fontSize: 14,
+    color: '#4CA1DE',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    lineHeight: 18,
   },
-  btn: {
-    backgroundColor: WHITE,
-    paddingVertical: 14,
+  inputContainer: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginBottom: 18,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
   },
-  btnText: {
-    color: BLUE,
-    fontWeight: '800',
+  inputField: {
+    flex: 1,
+    paddingVertical: 12,
     fontSize: 16,
   },
-  loginRow: {
-    flexDirection: 'row',
+  inputError: {
+    borderColor: '#F87171',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    marginTop: -6,
+    marginBottom: 6,
+  },
+  ctaWrap: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  ctaButton: {
+    paddingVertical: 14,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  smallText: {
-    color: WHITE,
-    opacity: 0.9,
-    fontSize: 12,
-  },
-  link: {
-    color: WHITE,
+  ctaText: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '700',
-    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+  footerText: {
+    textAlign: 'center',
+    color: '#1E293B',
+    marginTop: 2,
+    fontSize: 14,
+  },
+  loginLink: {
+    color: '#26A9E1',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });
