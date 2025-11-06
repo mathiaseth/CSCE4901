@@ -61,7 +61,7 @@ export default function PhysicalStatsScreen() {
   const handleContinue = () => {
     if (!isValid) return;
     // TODO: save values somewhere (context / storage) before moving on
-    router.replace('/setup/goals-activity');
+    router.replace('/setup/goal');
   };
 
   const onBlurHeight = () => {
