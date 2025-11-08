@@ -1,48 +1,59 @@
 // app/_layout.tsx
+import 'react-native-get-random-values';
+import 'react-native-url-polyfill/auto';
+
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { hasSeenOnboarding } from '@/lib/onboarding';
+import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, MomoTrustDisplay_400Regular } from '@expo-google-fonts/momo-trust-display';
 import { Kavoon_400Regular } from '@expo-google-fonts/kavoon';
-import * as SplashScreen from 'expo-splash-screen';
+import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ MomoTrustDisplay_400Regular, Kavoon_400Regular });
-  const [storageReady, setStorageReady] = useState(false);
-
-  // You’re forcing onboarding for now
-  useEffect(() => {
-    (async () => {
-      try {
-        // pretend onboarding has NOT been seen (for dev)
-      } finally {
-        setStorageReady(true);
-      }
-    })();
-  }, []);
-
-  const appReady = fontsLoaded && storageReady;
+  const [initializing, setInitializing] = useState(true);
+  const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
 
   const segments = useSegments();
   const router = useRouter();
 
-  // 👇 Allow /login to be visited; force all other routes to onboarding
   useEffect(() => {
-    if (!appReady) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setInitializing(false);
 
-    const inOnboarding = segments[0] === '(onboarding)';
-    const isLogin = segments[0] === 'login';
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        setSession(newSession);
+      });
+      return () => sub.subscription.unsubscribe();
+    })();
+  }, []);
 
-    if (!inOnboarding && !isLogin) {
-      router.replace('/(onboarding)');
+  useEffect(() => {
+    if (initializing || !fontsLoaded) return;
+
+    const seg0 = segments[0];
+    const inOnboarding = seg0 === '(onboarding)';
+    const isLogin = seg0 === 'login';
+    const isSignup = seg0 === 'signup';
+    const inTabs = seg0 === '(tabs)';
+
+    if (session) {
+      if (!inTabs) router.replace('/(tabs)/dashboard');
+    } else {
+      if (!inOnboarding && !isLogin && !isSignup) {
+        router.replace('/(onboarding)');
+      }
     }
-  }, [appReady, segments, router]);
+  }, [session, segments, fontsLoaded, initializing, router]);
 
   useEffect(() => {
-    if (appReady) SplashScreen.hideAsync().catch(() => {});
-  }, [appReady]);
+    if (!initializing && fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [initializing, fontsLoaded]);
 
-  return appReady ? <Slot /> : null;
+  if (initializing || !fontsLoaded) return null;
+  return <Slot />;
 }

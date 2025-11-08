@@ -1,18 +1,60 @@
 // app/login.tsx
-import React from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function Login() {
+  const [email, setEmail] = useState('');
+  const [pwd, setPwd] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleLogin = async () => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pwd,
+      });
+
+      if (error) {
+        Alert.alert('Login failed', error.message ?? 'Unknown error');
+        return;
+      }
+
+      // Session present -> route into app
+      router.replace('/(tabs)/dashboard');
+    } catch (e: any) {
+      Alert.alert('Login failed', e?.message ?? 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
 
-      <TextInput placeholder="Email" style={styles.input} autoCapitalize="none" />
-      <TextInput placeholder="Password" style={styles.input} secureTextEntry />
+      <TextInput
+        placeholder="Email"
+        style={styles.input}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        placeholder="Password"
+        style={styles.input}
+        secureTextEntry
+        value={pwd}
+        onChangeText={setPwd}
+      />
 
-      <Pressable style={styles.btn} onPress={() => router.replace('/(tabs)/dashboard')}>
-        <Text style={styles.btnText}>Continue</Text>
+      <Pressable style={[styles.btn, submitting && { opacity: 0.7 }]} onPress={handleLogin} disabled={submitting}>
+        <Text style={styles.btnText}>{submitting ? 'Signing in…' : 'Continue'}</Text>
       </Pressable>
     </View>
   );
