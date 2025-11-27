@@ -1,4 +1,4 @@
-// app/setup/gender-dob.tsx
+// app/setup/sex-dob.tsx  
 import React, { useState } from 'react';
 import {
   View,
@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function GenderDobScreen() {
   const [gender, setGender] = useState<string>('');
@@ -23,8 +24,8 @@ export default function GenderDobScreen() {
   const [showPicker, setShowPicker] = useState(false);
 
   const onChange = (_: DateTimePickerEvent, selected?: Date) => {
+    // Android closes automatically when a value is picked
     if (Platform.OS !== 'ios') {
-      // Android: picker closes automatically
       setShowPicker(false);
     }
     if (selected) setDob(selected);
@@ -32,9 +33,15 @@ export default function GenderDobScreen() {
 
   const isValid = gender !== '' && !!dob;
 
-  const handleContinue = () => {
-    if (!isValid) return;
-    router.replace('/setup/physical-stats');
+  const handleContinue = async () => {
+    if (!isValid || !dob) return;
+
+    // 🔹 Save gender + DOB so summary/dashboard can read them later
+    await AsyncStorage.setItem('onboard.gender', gender);
+    await AsyncStorage.setItem('onboard.dob', dob.toISOString());
+
+    // 🔹 Go to physical-stats step
+    router.push('/setup/physical-stats');
   };
 
   return (
@@ -227,7 +234,6 @@ const styles = StyleSheet.create({
   ctaText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
   backLink: { color: '#1E90D6', fontWeight: '700', textDecorationLine: 'underline' },
 
-  // Modal overlay
   overlay: {
     position: 'absolute',
     top: 0,
@@ -238,25 +244,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   modalContent: {
     width: '90%',
     borderRadius: 16,
     overflow: 'hidden',
   },
-
   pickerGradient: {
     padding: 12,
     borderRadius: 16,
     width: '100%',
   },
-
   pickerInner: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     borderRadius: 12,
     padding: 6,
   },
-
   picker: {
     backgroundColor: 'transparent',
     width: '100%',

@@ -15,8 +15,13 @@ import {
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useFonts, Poppins_500Medium, Poppins_700Bold } from '@expo-google-fonts/poppins';
+import {
+  useFonts,
+  Poppins_500Medium,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -32,10 +37,11 @@ export default function SignUpNameStep() {
   const nameOk = useMemo(() => name.trim().length >= 2, [name]);
   const formValid = nameOk;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!formValid) return;
-    // Save name (optional AsyncStorage or state later)
-    router.replace('/setup/sex-dob'); // This is the next page in the setup flow
+
+    await AsyncStorage.setItem('onboard.fullName', name.trim());
+    router.push('/setup/sex-dob');
   };
 
   if (!fontsLoaded) return null;
@@ -49,15 +55,16 @@ export default function SignUpNameStep() {
         <View style={styles.container}>
           <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-          {/* Header icon */}
+          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconCircle}>
               <Ionicons name="person-outline" size={28} color="#FFFFFF" />
             </View>
+
             <Text style={styles.headerTitle}>Let’s get to know you</Text>
             <Text style={styles.headerSubtitle}>What’s your name?</Text>
 
-            {/* progress (Step 1 of 5) */}
+            {/* progress bar */}
             <View style={styles.progressRow}>
               <View style={[styles.progressBar, styles.progressActive]} />
               <View style={styles.progressBar} />
@@ -67,14 +74,17 @@ export default function SignUpNameStep() {
             </View>
           </View>
 
-          {/* Center Input */}
+          {/* Name input */}
           <View style={styles.center}>
             <TextInput
               placeholder="Enter your full name"
               value={name}
               onChangeText={setName}
               onBlur={() => setTouched(true)}
-              style={[styles.input, !nameOk && touched ? styles.inputError : null]}
+              style={[
+                styles.input,
+                !nameOk && touched ? styles.inputError : null,
+              ]}
               placeholderTextColor="#9CA3AF"
             />
             {!nameOk && touched && (
@@ -82,7 +92,7 @@ export default function SignUpNameStep() {
             )}
           </View>
 
-          {/* Continue Button */}
+          {/* Continue button + Back */}
           <View style={styles.footer}>
             <LinearGradient
               colors={formValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
@@ -98,6 +108,15 @@ export default function SignUpNameStep() {
                 <Text style={styles.ctaText}>Continue</Text>
               </Pressable>
             </LinearGradient>
+
+            {/* This is the matching BACK BUTTON */}
+            <Pressable
+              onPress={() => router.push('/')}
+              hitSlop={10}
+              style={{ marginTop: 8 }}
+            >
+              <Text style={styles.backLink}>Back</Text>
+            </Pressable>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -107,11 +126,13 @@ export default function SignUpNameStep() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 24 },
+
   header: {
     alignItems: 'center',
     marginTop: 120,
     marginBottom: 30,
   },
+
   iconCircle: {
     width: 64,
     height: 64,
@@ -121,6 +142,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 14,
   },
+
   headerTitle: {
     fontFamily: 'Poppins_700Bold',
     fontSize: 22,
@@ -128,6 +150,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
+
   headerSubtitle: {
     fontFamily: 'Poppins_500Medium',
     fontSize: 15,
@@ -135,26 +158,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+
   progressRow: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 8,
   },
+
   progressBar: {
     width: 36,
     height: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 999,
   },
-  progressActive: {
-    backgroundColor: '#1E90D6',
-  },
+
+  progressActive: { backgroundColor: '#1E90D6' },
+
   center: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    width: '100%',
     marginTop: 20,
   },
+
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -162,34 +187,48 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 17,
     fontFamily: 'Poppins_500Medium',
-    width: '100%',
     backgroundColor: '#FFFFFF',
   },
+
   inputError: {
     borderColor: '#F87171',
   },
+
   errorText: {
     color: '#DC2626',
     fontSize: 13,
     marginTop: 6,
     fontFamily: 'Poppins_500Medium',
   },
+
   footer: {
     paddingBottom: 40,
+    alignItems: 'center',
   },
+
   ctaWrap: {
+    width: '100%',
     borderRadius: 14,
     overflow: 'hidden',
   },
+
   ctaButton: {
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   ctaText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontFamily: 'Poppins_700Bold',
     letterSpacing: 0.3,
+  },
+
+  backLink: {
+    color: '#1E90D6',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
   },
 });

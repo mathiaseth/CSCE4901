@@ -17,12 +17,15 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Units = 'imperial' | 'metric';
 
 export default function PhysicalStatsScreen() {
+  // Step 3 of onboarding: collect height + weight (imperial or metric) with basic validation
   const [units, setUnits] = useState<Units>('imperial');
 
+  // Raw text input values so the fields behave like normal inputs
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -30,45 +33,92 @@ export default function PhysicalStatsScreen() {
   const [weightLbs, setWeightLbs] = useState('');
   const [weightKg, setWeightKg] = useState('');
 
-  // track if fields were touched (for showing errors)
+  // Track if height/weight fields have been touched so errors only show after interaction
   const [touchedHeight, setTouchedHeight] = useState(false);
   const [touchedWeight, setTouchedWeight] = useState(false);
 
-  // parsed values
+  // Parse string inputs into numbers for validation logic
   const ft = parseInt(heightFt || '0', 10);
   const inch = parseInt(heightIn || '0', 10);
   const cm = parseInt(heightCm || '0', 10);
   const lbs = parseFloat(weightLbs || '0');
   const kg = parseFloat(weightKg || '0');
 
-  // height validation
+  // Height validation rules for both unit systems
   const heightValid = useMemo(() => {
     if (units === 'imperial') {
       const total = ft * 12 + inch;
-      return total >= 48 && total <= 84; // 4ft–7ft
+      // Accept anything between 4ft (48in) and 7ft (84in)
+      return total >= 48 && total <= 84;
     }
-    return cm >= 140 && cm <= 230; // 140–230 cm
+    // Metric: 140–230 cm
+    return cm >= 140 && cm <= 230;
   }, [units, ft, inch, cm]);
 
-  // weight validation
+  // Weight validation rules for both unit systems
   const weightValid = useMemo(() => {
-    if (units === 'imperial') return lbs >= 70 && lbs <= 500;
+    if (units === 'imperial') {
+      // 70–500 lbs
+      return lbs >= 70 && lbs <= 500;
+    }
+    // 30–250 kg
     return kg >= 30 && kg <= 250;
   }, [units, lbs, kg]);
 
   const isValid = heightValid && weightValid;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isValid) return;
-    // TODO: save values somewhere (context / storage) before moving on
-    router.replace('/setup/goal');
+
+    // Save units + height + weight for summary + macro logic
+    try {
+      let saveHeightCm = 0;
+      let saveWeightKg = 0;
+      let saveHeightFt = ft;
+      let saveHeightIn = inch;
+      let saveWeightLbs = lbs;
+
+      if (units === 'imperial') {
+        const totalInches = ft * 12 + inch;
+        saveHeightCm = Math.round(totalInches * 2.54);
+        saveWeightKg = Math.round(lbs * 0.453592 * 10) / 10;
+      } else {
+        // Metric is primary
+        saveHeightCm = cm;
+        saveWeightKg = kg;
+
+        // Pre-compute imperial for later display if we ever need it
+        const totalInches = Math.round(cm / 2.54);
+        saveHeightFt = Math.floor(totalInches / 12);
+        saveHeightIn = totalInches - saveHeightFt * 12;
+        saveWeightLbs = Math.round(kg / 0.453592);
+      }
+
+      await AsyncStorage.multiSet([
+        ['onboard.units', units],
+        ['onboard.heightFt', String(saveHeightFt)],
+        ['onboard.heightIn', String(saveHeightIn)],
+        ['onboard.heightCm', String(saveHeightCm)],
+        ['onboard.weightLbs', String(saveWeightLbs)],
+        ['onboard.weightKg', String(saveWeightKg)],
+      ]);
+    } catch (err) {
+      // If storage fails, just bail out of continue; we can log this later if needed
+      console.warn('Failed to save physical stats', err);
+      return;
+    }
+
+    // Move to goal step once everything is stored
+    router.push('/setup/goal');
   };
 
   const onBlurHeight = () => {
+    // Mark height section as interacted with so we can show validation messages
     setTouchedHeight(true);
   };
 
   const onBlurWeight = () => {
+    // Mark weight section as interacted with so we can show validation messages
     setTouchedWeight(true);
   };
 
@@ -86,7 +136,7 @@ export default function PhysicalStatsScreen() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Header */}
+            {/* Header: icon, title, subtitle, and step progress (3/5) */}
             <View style={styles.header}>
               <View style={styles.iconCircle}>
                 <Ionicons name="barbell-outline" size={30} color="#fff" />
@@ -96,7 +146,7 @@ export default function PhysicalStatsScreen() {
                 We’ll use this to personalize your calories & macros.
               </Text>
 
-              {/* progress bar (step 3) */}
+              {/* Progress bar for onboarding steps */}
               <View style={styles.progressRow}>
                 <View style={[styles.progressBar, styles.progressActive]} />
                 <View style={[styles.progressBar, styles.progressActive]} />
@@ -106,13 +156,14 @@ export default function PhysicalStatsScreen() {
               </View>
             </View>
 
-            {/* Units */}
+            {/* Units selector: toggle between imperial and metric */}
             <View style={styles.unitsCard}>
               <Text style={styles.sectionLabel}>Units</Text>
 
               <View style={styles.unitsToggleRow}>
                 <Pressable
                   onPress={() => {
+                    // Switch to imperial and reset touched states so old errors don't linger
                     setUnits('imperial');
                     setTouchedHeight(false);
                     setTouchedWeight(false);
@@ -134,6 +185,7 @@ export default function PhysicalStatsScreen() {
 
                 <Pressable
                   onPress={() => {
+                    // Switch to metric and reset touched states
                     setUnits('metric');
                     setTouchedHeight(false);
                     setTouchedWeight(false);
@@ -155,11 +207,12 @@ export default function PhysicalStatsScreen() {
               </View>
             </View>
 
-            {/* Height */}
+            {/* Height section */}
             <Text style={[styles.sectionLabel, { marginTop: 20 }]}>Height</Text>
 
             {units === 'imperial' ? (
               <>
+                {/* Imperial height: feet + inches side by side */}
                 <View style={styles.heightRow}>
                   <View style={styles.heightField}>
                     <Text style={styles.inputLabel}>Feet</Text>
@@ -194,6 +247,7 @@ export default function PhysicalStatsScreen() {
                   </View>
                 </View>
 
+                {/* Height error only shows after the user interacts with the fields */}
                 {!heightValid && touchedHeight && (
                   <Text style={styles.errorText}>
                     Height must be between 4 ft (48 in) and 7 ft (84 in).
@@ -202,6 +256,7 @@ export default function PhysicalStatsScreen() {
               </>
             ) : (
               <>
+                {/* Metric height: single centimeters field */}
                 <Text style={styles.inputLabel}>Centimeters</Text>
                 <TextInput
                   keyboardType="number-pad"
@@ -223,7 +278,7 @@ export default function PhysicalStatsScreen() {
               </>
             )}
 
-            {/* Weight */}
+            {/* Weight section */}
             <Text style={[styles.sectionLabel, { marginTop: 20 }]}>Weight</Text>
 
             <Text style={styles.inputLabel}>
@@ -250,7 +305,7 @@ export default function PhysicalStatsScreen() {
             )}
           </ScrollView>
 
-          {/* Footer CTA – stays at bottom, can be covered by keyboard (on purpose) */}
+          {/* Footer CTA lives at the bottom; okay if keyboard covers it while typing */}
           <View style={styles.footer}>
             <LinearGradient
               colors={isValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
@@ -280,7 +335,7 @@ export default function PhysicalStatsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 8 },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 40, // Extra padding so last input isn’t jammed into the footer
   },
 
   header: { alignItems: 'center', marginTop: 60, marginBottom: 10 },

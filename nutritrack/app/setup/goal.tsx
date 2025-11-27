@@ -10,28 +10,32 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type GoalType = 'lose' | 'maintain' | 'gain' | 'recomp' | '';
 
 export default function GoalScreen() {
+  // Step 4 of onboarding: capture the main fitness goal (used later for macros + suggestions)
   const [goal, setGoal] = useState<GoalType>('');
 
+  // Simple check to enable/disable Continue
   const isValid = goal !== '';
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isValid) return;
 
-    // TODO: Save goal to storage or context if needed
-    // e.g. await AsyncStorage.setItem('onboard.goal', goal)
+    // Persist selected goal so the summary / dashboard can read it
+    await AsyncStorage.setItem('onboard.goal', goal);
 
-    router.replace('/setup/activity-level'); // go to next step
+    // Move to next onboarding step (activity level screen)
+    router.push('/setup/activity-level');
   };
 
   return (
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
+      {/* Header: goal icon, title, subtitle, and progress indicator */}
       <View style={styles.header}>
         <View style={styles.iconCircle}>
           <Ionicons name="trophy-outline" size={30} color="#fff" />
@@ -41,7 +45,7 @@ export default function GoalScreen() {
           Choose the option that best matches what you want NutriTrack to help you with.
         </Text>
 
-        {/* progress (4/6) */}
+        {/* Progress bar (step 4/5 in the setup flow) */}
         <View style={styles.progressRow}>
           <View style={[styles.progressBar, styles.progressActive]} />
           <View style={[styles.progressBar, styles.progressActive]} />
@@ -51,11 +55,12 @@ export default function GoalScreen() {
         </View>
       </View>
 
-      {/* Content */}
+      {/* Main content: goal cards */}
       <View style={styles.content}>
         <Text style={styles.sectionLabel}>Select your goal</Text>
 
         <View style={styles.cardCol}>
+          {/* Lose weight goal */}
           <Pressable
             onPress={() => setGoal('lose')}
             style={[styles.card, goal === 'lose' && styles.cardActive]}
@@ -75,6 +80,7 @@ export default function GoalScreen() {
             </Text>
           </Pressable>
 
+          {/* Maintain weight goal */}
           <Pressable
             onPress={() => setGoal('maintain')}
             style={[styles.card, goal === 'maintain' && styles.cardActive]}
@@ -94,6 +100,7 @@ export default function GoalScreen() {
             </Text>
           </Pressable>
 
+          {/* Build muscle / gain goal */}
           <Pressable
             onPress={() => setGoal('gain')}
             style={[styles.card, goal === 'gain' && styles.cardActive]}
@@ -113,6 +120,7 @@ export default function GoalScreen() {
             </Text>
           </Pressable>
 
+          {/* Body recomposition goal */}
           <Pressable
             onPress={() => setGoal('recomp')}
             style={[styles.card, goal === 'recomp' && styles.cardActive]}
@@ -134,7 +142,7 @@ export default function GoalScreen() {
         </View>
       </View>
 
-      {/* Footer CTA */}
+      {/* Footer: continue + back navigation */}
       <View style={styles.footer}>
         <LinearGradient
           colors={isValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}

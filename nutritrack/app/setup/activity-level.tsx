@@ -1,4 +1,5 @@
 // app/setup/activity-level.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -6,26 +7,27 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ActivityType = 'sedentary' | 'light' | 'moderate' | 'active' | 'athlete' | '';
 
 export default function ActivityLevelScreen() {
+  // Step 5 of onboarding: store how active the user is
   const [activity, setActivity] = useState<ActivityType>('');
 
   const isValid = activity !== '';
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!isValid) return;
 
-    // TODO: Save activity level (AsyncStorage / context) if needed
-    // e.g. await AsyncStorage.setItem('onboard.activity', activity)
+    await AsyncStorage.setItem('onboard.activity', activity);
 
-    // For now, go to dashboard.
-    router.replace('/(tabs)/dashboard');
+    router.push('/setup/summary');
   };
 
   return (
@@ -42,7 +44,6 @@ export default function ActivityLevelScreen() {
           Tell us about your typical day so we can estimate your daily calories.
         </Text>
 
-        {/* progress (5/5 for now) */}
         <View style={styles.progressRow}>
           <View style={[styles.progressBar, styles.progressActive]} />
           <View style={[styles.progressBar, styles.progressActive]} />
@@ -52,8 +53,12 @@ export default function ActivityLevelScreen() {
         </View>
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
+      {/* Scrollable Content */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.sectionLabel}>Select your usual activity level</Text>
 
         <View style={styles.cardCol}>
@@ -65,7 +70,7 @@ export default function ActivityLevelScreen() {
             <View style={styles.cardHeaderRow}>
               <Ionicons
                 name="desktop-outline"
-                size={22}
+                size={20}
                 color={activity === 'sedentary' ? '#0B2C5E' : '#64748B'}
               />
               <Text
@@ -78,7 +83,7 @@ export default function ActivityLevelScreen() {
               </Text>
             </View>
             <Text style={styles.cardBodyText}>
-              Desk job, little to no exercise, minimal daily movement.
+              Desk job, little to no exercise, minimal movement.
             </Text>
           </Pressable>
 
@@ -90,7 +95,7 @@ export default function ActivityLevelScreen() {
             <View style={styles.cardHeaderRow}>
               <Ionicons
                 name="walk-outline"
-                size={22}
+                size={20}
                 color={activity === 'light' ? '#0B2C5E' : '#64748B'}
               />
               <Text
@@ -103,7 +108,7 @@ export default function ActivityLevelScreen() {
               </Text>
             </View>
             <Text style={styles.cardBodyText}>
-              Light exercise 1–2 days/week, casual walks or errands.
+              Light exercise 1–2 days/week or casual walking.
             </Text>
           </Pressable>
 
@@ -115,7 +120,7 @@ export default function ActivityLevelScreen() {
             <View style={styles.cardHeaderRow}>
               <Ionicons
                 name="bicycle-outline"
-                size={22}
+                size={20}
                 color={activity === 'moderate' ? '#0B2C5E' : '#64748B'}
               />
               <Text
@@ -128,7 +133,7 @@ export default function ActivityLevelScreen() {
               </Text>
             </View>
             <Text style={styles.cardBodyText}>
-              Exercise 3–4 days/week or on your feet a good part of the day.
+              Exercise 3–4 days/week or frequently on your feet.
             </Text>
           </Pressable>
 
@@ -140,7 +145,7 @@ export default function ActivityLevelScreen() {
             <View style={styles.cardHeaderRow}>
               <Ionicons
                 name="barbell-outline"
-                size={22}
+                size={20}
                 color={activity === 'active' ? '#0B2C5E' : '#64748B'}
               />
               <Text
@@ -153,11 +158,11 @@ export default function ActivityLevelScreen() {
               </Text>
             </View>
             <Text style={styles.cardBodyText}>
-              Intense training 5–6 days/week or a highly active job.
+              Intense training 5–6 days/week or very active job.
             </Text>
           </Pressable>
 
-          {/* Athlete / super active */}
+          {/* Athlete */}
           <Pressable
             onPress={() => setActivity('athlete')}
             style={[styles.card, activity === 'athlete' && styles.cardActive]}
@@ -165,7 +170,7 @@ export default function ActivityLevelScreen() {
             <View style={styles.cardHeaderRow}>
               <Ionicons
                 name="fitness-outline"
-                size={22}
+                size={20}
                 color={activity === 'athlete' ? '#0B2C5E' : '#64748B'}
               />
               <Text
@@ -178,13 +183,13 @@ export default function ActivityLevelScreen() {
               </Text>
             </View>
             <Text style={styles.cardBodyText}>
-              Daily intense training, sports, or very demanding physical work.
+              Daily intense training or physically demanding work.
             </Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
 
-      {/* Footer CTA */}
+      {/* Footer */}
       <View style={styles.footer}>
         <LinearGradient
           colors={isValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
@@ -193,15 +198,15 @@ export default function ActivityLevelScreen() {
           style={styles.ctaWrap}
         >
           <Pressable
-            style={[styles.ctaButton, !isValid && { opacity: 0.7 }]}
+            style={[styles.ctaButton, !isValid && { opacity: 0.6 }]}
             onPress={handleContinue}
             disabled={!isValid}
           >
-            <Text style={styles.ctaText}>Finish Setup</Text>
+            <Text style={styles.ctaText}>Continue</Text>
           </Pressable>
         </LinearGradient>
 
-        <Pressable onPress={() => router.back()} hitSlop={10} style={{ marginTop: 8 }}>
+        <Pressable onPress={() => router.back()} hitSlop={10}>
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
       </View>
@@ -216,11 +221,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
   },
+
   header: {
     alignItems: 'center',
     marginTop: 60,
     marginBottom: 10,
   },
+
   iconCircle: {
     width: 64,
     height: 64,
@@ -230,98 +237,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
+
   headerTitle: {
     fontSize: 22,
     color: '#0B2C5E',
     fontWeight: '700',
     textAlign: 'center',
   },
+
   headerSubtitle: {
     fontSize: 14,
     color: '#4CA1DE',
     textAlign: 'center',
     marginTop: 4,
   },
+
   progressRow: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
   },
+
   progressBar: {
     width: 36,
     height: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 999,
   },
+
   progressActive: {
     backgroundColor: '#1E90D6',
   },
+
   content: {
-    flex: 1,
-    marginTop: 16,
+    paddingBottom: 60, // extra space above the footer
   },
+
   sectionLabel: {
     color: '#0B2C5E',
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 10,
+    marginTop: 10,
   },
+
   cardCol: {
-    gap: 10,
+    gap: 8,
+    paddingBottom: 40, // ensures the last card won't touch the CTA
   },
+
   card: {
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     backgroundColor: '#FFFFFF',
-    gap: 4,
+    gap: 8,
   },
+
   cardActive: {
     borderColor: '#1E90D6',
     backgroundColor: '#EFF6FF',
   },
+
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     marginBottom: 2,
   },
+
   cardTitle: {
     color: '#64748B',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 15,
   },
+
   cardTitleActive: {
     color: '#0B2C5E',
   },
+
   cardBodyText: {
     color: '#6B7280',
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
   },
+
   footer: {
-    paddingBottom: 24,
+    paddingBottom: 28,
     alignItems: 'center',
   },
+
   ctaWrap: {
     width: '100%',
     borderRadius: 14,
     overflow: 'hidden',
+    marginBottom: 10,
   },
+
   ctaButton: {
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   ctaText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+
   backLink: {
     color: '#1E90D6',
     fontWeight: '700',
     textDecorationLine: 'underline',
+    textAlign: 'center',
   },
 });
