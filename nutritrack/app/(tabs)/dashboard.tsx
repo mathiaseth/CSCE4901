@@ -244,6 +244,37 @@ export default function DashboardScreen() {
               <Text style={styles.emptyText}>No entries yet. Log your first meal.</Text>
             </View>
           }
+          ListFooterComponent={
+            <View style={styles.quickLinks}>
+              <Text style={styles.sectionTitle}>More</Text>
+
+              <View style={styles.quickRow}>
+                <Pressable
+                  style={styles.quickBtn}
+                  onPress={() => router.push('/profile')}
+                >
+                  <Ionicons name="person-outline" size={18} color="#0B2C5E" />
+                  <Text style={styles.quickText}>Profile</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.quickBtn}
+                  onPress={() => router.push('/settings')}
+                >
+                  <Ionicons name="settings-outline" size={18} color="#0B2C5E" />
+                  <Text style={styles.quickText}>Settings</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.quickBtn}
+                  onPress={() => router.push('/log-entry')}
+                >
+                  <Ionicons name="create-outline" size={18} color="#0B2C5E" />
+                  <Text style={styles.quickText}>Log Entry</Text>
+                </Pressable>
+              </View>
+            </View>
+          }
         />
       </View>
     </View>
@@ -363,4 +394,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyText: { marginTop: 8, color: '#64748B', fontWeight: '700', fontSize: 13 },
+
+  quickLinks: { marginTop: 6 },
+  quickRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  quickBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  quickText: { color: '#0B2C5E', fontWeight: '900', fontSize: 13 },
 });
