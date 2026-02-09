@@ -1,5 +1,3 @@
-// app/setup/create-account.tsx
-
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -7,59 +5,78 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
+  StatusBar,
   KeyboardAvoidingView,
+  Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  Platform,
-  StatusBar,
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function CreateAccountScreen() {
-  // Final onboarding step: user sets email + password for login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
 
-  // Track if user has interacted with fields so errors don't show immediately
-  const [touchedEmail, setTouchedEmail] = useState(false);
-  const [touchedPassword, setTouchedPassword] = useState(false);
+  const [tEmail, setTEmail] = useState(false);
+  const [tPass, setTPass] = useState(false);
+  const [tConfirm, setTConfirm] = useState(false);
 
-  // Basic email validation (just enough for onboarding)
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const emailOk = useMemo(() => {
-    const trimmed = email.trim();
-    return trimmed.length > 3 && trimmed.includes('@');
+    const e = email.trim().toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   }, [email]);
 
-  // Basic password validation
-  const passwordOk = useMemo(() => password.length >= 6, [password]);
+  const passOk = useMemo(() => password.length >= 6, [password]);
+  const confirmOk = useMemo(() => confirm.length > 0 && confirm === password, [confirm, password]);
 
-  const formValid = emailOk && passwordOk;
+  const formValid = emailOk && passOk && confirmOk;
 
-  const handleFinish = async () => {
-    if (!formValid) return;
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    // Store email + flag that user finished full onboarding
-    await AsyncStorage.setItem('onboard.email', cleanEmail);
-    await AsyncStorage.setItem('onboard.hasFinished', 'true');
-
-    // Later this is where real auth (Firebase, Supabase, custom API) will plug in
-    router.replace('/(tabs)/dashboard');
+  const friendlyFirebaseError = (code?: string) => {
+    switch (code) {
+      case 'auth/email-already-in-use':
+        return 'That email is already in use. Try logging in instead.';
+      case 'auth/invalid-email':
+        return 'That email address is invalid.';
+      case 'auth/weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'auth/network-request-failed':
+        return 'Network error. Check your connection and try again.';
+      default:
+        return 'Signup failed. Please try again.';
+    }
   };
 
-  const handleGoogleSignUp = () => {
-    // Placeholder for Google auth wiring
-    console.log('TODO: Google sign up');
-  };
+  const handleCreate = async () => {
+    if (!formValid || loading) return;
 
-  const handleAppleSignUp = () => {
-    // Placeholder for Apple auth wiring
-    console.log('TODO: Apple sign up');
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+
+      await createUserWithEmailAndPassword(auth, cleanEmail, password);
+
+      // Optional: store email for display later
+      await AsyncStorage.setItem('onboard.email', cleanEmail);
+
+      // Go to dashboard after account creation
+      router.replace('/(tabs)/dashboard');
+    } catch (err: any) {
+      setErrorMsg(friendlyFirebaseError(err?.code));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,103 +88,102 @@ export default function CreateAccountScreen() {
         <View style={styles.container}>
           <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-          {/* Header: final step messaging */}
-          <View style={styles.header}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="lock-closed-outline" size={28} color="#FFFFFF" />
-            </View>
-            <Text style={styles.headerTitle}>Set up your login</Text>
-            <Text style={styles.headerSubtitle}>
-              Create your email and password so you can sign back into NutriTrack.
-            </Text>
-          </View>
-
-          {/* Scrollable content so smaller screens can still reach everything */}
           <ScrollView
-            style={styles.formScroll}
-            contentContainerStyle={styles.formContent}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 20 }}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Email field */}
-            <Text style={styles.fieldLabel}>Email</Text>
-            <TextInput
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              onBlur={() => setTouchedEmail(true)}
-              style={[
-                styles.input,
-                !emailOk && touchedEmail && styles.inputError,
-              ]}
-              placeholderTextColor="#9CA3AF"
-            />
-            {!emailOk && touchedEmail && (
-              <Text style={styles.errorText}>Enter a valid email address.</Text>
-            )}
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="key-outline" size={28} color="#FFFFFF" />
+              </View>
 
-            {/* Password field */}
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Password</Text>
-            <TextInput
-              placeholder="Create a password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              onBlur={() => setTouchedPassword(true)}
-              style={[
-                styles.input,
-                !passwordOk && touchedPassword && styles.inputError,
-              ]}
-              placeholderTextColor="#9CA3AF"
-            />
-            {!passwordOk && touchedPassword && (
-              <Text style={styles.errorText}>
-                Password should be at least 6 characters.
+              <Text style={styles.headerTitle}>Create your account</Text>
+              <Text style={styles.headerSubtitle}>
+                Save your plan and start logging meals.
               </Text>
-            )}
 
-            {/* OR divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or sign up with</Text>
-              <View style={styles.dividerLine} />
+              {/* Progress: after summary (optional visual) */}
+              <View style={styles.progressRow}>
+                <View style={[styles.progressBar, styles.progressActive]} />
+                <View style={[styles.progressBar, styles.progressActive]} />
+                <View style={[styles.progressBar, styles.progressActive]} />
+                <View style={[styles.progressBar, styles.progressActive]} />
+                <View style={[styles.progressBar, styles.progressActive]} />
+              </View>
             </View>
 
-            {/* Social auth buttons */}
-            <View style={styles.socialRow}>
-              <Pressable style={styles.socialButton} onPress={handleGoogleSignUp}>
-                <Ionicons name="logo-google" size={20} color="#EA4335" />
-                <Text style={styles.socialText}>Google</Text>
-              </Pressable>
+            {/* Form */}
+            <View style={styles.card}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                onBlur={() => setTEmail(true)}
+                placeholder="you@example.com"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, tEmail && !emailOk ? styles.inputError : null]}
+              />
+              {tEmail && !emailOk && (
+                <Text style={styles.errorText}>Enter a valid email address.</Text>
+              )}
 
-              <Pressable
-                style={[styles.socialButton, styles.appleButton]}
-                onPress={handleAppleSignUp}
-              >
-                <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
-                <Text style={[styles.socialText, { color: '#FFFFFF' }]}>
-                  Apple
-                </Text>
-              </Pressable>
+              <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                onBlur={() => setTPass(true)}
+                placeholder="At least 6 characters"
+                placeholderTextColor="#9CA3AF"
+                secureTextEntry
+                style={[styles.input, tPass && !passOk ? styles.inputError : null]}
+              />
+              {tPass && !passOk && (
+                <Text style={styles.errorText}>Password must be at least 6 characters.</Text>
+              )}
+
+              <Text style={[styles.label, { marginTop: 12 }]}>Confirm Password</Text>
+              <TextInput
+                value={confirm}
+                onChangeText={setConfirm}
+                onBlur={() => setTConfirm(true)}
+                placeholder="Re-enter password"
+                placeholderTextColor="#9CA3AF"
+                secureTextEntry
+                style={[styles.input, tConfirm && !confirmOk ? styles.inputError : null]}
+              />
+              {tConfirm && !confirmOk && (
+                <Text style={styles.errorText}>Passwords do not match.</Text>
+              )}
+
+              {errorMsg ? <Text style={styles.firebaseError}>{errorMsg}</Text> : null}
             </View>
           </ScrollView>
 
-          {/* Footer: final CTA */}
+          {/* Footer */}
           <View style={styles.footer}>
             <LinearGradient
-              colors={formValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
+              colors={
+                formValid && !loading
+                  ? ['#4CA1DE', '#1E90D6']
+                  : ['#C7D2FE', '#A5B4FC']
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.ctaWrap}
             >
               <Pressable
-                style={[styles.ctaButton, !formValid && { opacity: 0.7 }]}
-                onPress={handleFinish}
-                disabled={!formValid}
+                onPress={handleCreate}
+                disabled={!formValid || loading}
+                style={[styles.ctaButton, (!formValid || loading) && { opacity: 0.75 }]}
               >
-                <Text style={styles.ctaText}>Finish!</Text>
+                <Text style={styles.ctaText}>
+                  {loading ? 'Creating...' : 'Create Account'}
+                </Text>
               </Pressable>
             </LinearGradient>
 
@@ -184,12 +200,7 @@ export default function CreateAccountScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 24 },
 
-  header: {
-    alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 16,
-  },
-
+  header: { alignItems: 'center', marginTop: 90, marginBottom: 18 },
   iconCircle: {
     width: 64,
     height: 64,
@@ -197,134 +208,48 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E90D6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
+  headerTitle: { fontSize: 22, color: '#0B2C5E', fontWeight: '800', textAlign: 'center' },
+  headerSubtitle: { fontSize: 14, color: '#4CA1DE', textAlign: 'center', marginTop: 6 },
 
-  headerTitle: {
-    fontSize: 22,
-    color: '#0B2C5E',
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
+  progressRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  progressBar: { width: 36, height: 6, backgroundColor: '#E5E7EB', borderRadius: 999 },
+  progressActive: { backgroundColor: '#1E90D6' },
 
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#4CA1DE',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-
-  formScroll: {
-    flex: 1,
-  },
-
-  formContent: {
-    paddingBottom: 24,
-  },
-
-  fieldLabel: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-
-  input: {
+  card: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+
+  label: { fontSize: 12, color: '#64748B', fontWeight: '800', marginBottom: 6 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     backgroundColor: '#FFFFFF',
-    color: '#111827',
+    color: '#0F172A',
   },
+  inputError: { borderColor: '#F87171' },
 
-  inputError: {
-    borderColor: '#F87171',
-  },
+  errorText: { color: '#DC2626', fontSize: 12, marginTop: 6, fontWeight: '700' },
+  firebaseError: { marginTop: 12, color: '#DC2626', fontSize: 13, fontWeight: '900' },
 
-  errorText: {
-    color: '#DC2626',
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-
-  dividerText: {
-    marginHorizontal: 8,
-    fontSize: 12,
-    color: '#6B7280',
-  },
-
-  socialRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    gap: 8,
-  },
-
-  appleButton: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
-  },
-
-  socialText: {
-    fontSize: 14,
-    color: '#111827',
-  },
-
-  footer: {
-    paddingBottom: 32,
-  },
-
-  ctaWrap: {
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-
-  ctaButton: {
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  ctaText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  footer: { paddingBottom: 28 },
+  ctaWrap: { borderRadius: 14, overflow: 'hidden' },
+  ctaButton: { paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
+  ctaText: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', letterSpacing: 0.2 },
 
   backLink: {
     color: '#1E90D6',
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontWeight: '800',
     textAlign: 'center',
-    marginTop: 4,
+    textDecorationLine: 'underline',
   },
 });

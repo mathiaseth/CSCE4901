@@ -1,43 +1,35 @@
-// app/(onboarding)/index.tsx
-
 import React from 'react';
 import { View, Text, Image, StyleSheet, Pressable, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { markOnboardingSeen } from '@/lib/onboarding';
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
 
-  // When user taps "Get Started"
-  const handleStart = async () => {
-    await markOnboardingSeen(); // Save onboarding completion
-    router.replace('/setup/signup'); // Navigate to the signup screen
+  const handleStart = () => {
+    // go to signup flow
+    router.replace('/setup/signup');
   };
 
-  // When user taps "Login"
   const handleLogin = () => {
-    router.push('/login'); // route to login page (root-level)
+    router.push('/login');
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Logo */}
       <Image
         source={require('@/assets/images/Logo.png')}
         style={styles.image}
         resizeMode="contain"
       />
 
-      {/* Tagline */}
       <Text style={styles.subtitle}>
         Welcome to NutriFit, where nutrition goals are made for your fit.
       </Text>
 
-      {/* Bottom Blue Block */}
       <LinearGradient
         colors={['#4CA1DE', '#1E90D6']}
         start={{ x: 0, y: 0 }}
@@ -47,11 +39,11 @@ export default function OnboardingScreen() {
           { paddingBottom: Math.max(insets.bottom, 20) },
         ]}
       >
-        <Pressable style={styles.ctaButton} onPress={handleStart}>
+        <Pressable style={styles.ctaButton} onPress={handleStart} hitSlop={10}>
           <Text style={styles.ctaText}>GET STARTED</Text>
         </Pressable>
 
-        <Pressable onPress={handleLogin} style={styles.loginRow}>
+        <Pressable onPress={handleLogin} style={styles.loginRow} hitSlop={10}>
           <Text style={styles.footerText}>
             Already have an account? <Text style={styles.loginLink}>Login</Text>
           </Text>
@@ -81,7 +73,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
-    fontFamily: 'momoTrustDisplay-Regular', 
+    fontFamily: 'MomoTrustDisplay_400Regular',
   },
   bottomBlock: {
     position: 'absolute',

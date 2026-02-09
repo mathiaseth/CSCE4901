@@ -6,7 +6,7 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="dashboard"   // <-- must match app/(tabs)/dashboard.tsx
+        name="dashboard"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (

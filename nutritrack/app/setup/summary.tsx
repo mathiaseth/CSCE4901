@@ -1,13 +1,6 @@
 // app/setup/summary.tsx
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  StatusBar,
-  Pressable,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +20,6 @@ interface UserData {
 }
 
 export default function SummaryScreen() {
-  // Final onboarding step: read everything we stored along the way and show a recap
   const [userData, setUserData] = useState<UserData>({
     fullName: null,
     gender: null,
@@ -40,7 +32,6 @@ export default function SummaryScreen() {
   });
 
   useEffect(() => {
-    // Pull all onboarding keys once when the summary screen mounts
     const loadAllOnboardingData = async () => {
       try {
         const [
@@ -84,39 +75,23 @@ export default function SummaryScreen() {
         const goalRaw = goalPair[1];
         const activityRaw = activityPair[1];
 
-        // Format DOB into something friendly (assumes ISO string stored)
         let dobFormatted: string | null = null;
         if (dobRaw) {
           const d = new Date(dobRaw);
-          if (!isNaN(d.getTime())) {
-            dobFormatted = d.toLocaleDateString('en-US');
-          } else {
-            // If we ever change how we store DOB, keep the raw string as a fallback
-            dobFormatted = dobRaw;
-          }
+          dobFormatted = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US') : dobRaw;
         }
 
-        // Build height + weight strings based on units
         let heightText: string | null = null;
         let weightText: string | null = null;
 
         if (unitsRaw === 'imperial') {
-          if (heightFt && heightIn) {
-            heightText = `${heightFt} ft ${heightIn} in`;
-          }
-          if (weightLbs) {
-            weightText = `${weightLbs} lbs`;
-          }
+          if (heightFt && heightIn) heightText = `${heightFt} ft ${heightIn} in`;
+          if (weightLbs) weightText = `${weightLbs} lbs`;
         } else if (unitsRaw === 'metric') {
-          if (heightCm) {
-            heightText = `${heightCm} cm`;
-          }
-          if (weightKg) {
-            weightText = `${weightKg} kg`;
-          }
+          if (heightCm) heightText = `${heightCm} cm`;
+          if (weightKg) weightText = `${weightKg} kg`;
         }
 
-        // Map internal goal codes to user-friendly labels
         const goalLabelMap: Record<string, string> = {
           lose: 'Lose weight',
           maintain: 'Maintain weight',
@@ -133,9 +108,7 @@ export default function SummaryScreen() {
         };
 
         const goalLabel = goalRaw ? goalLabelMap[goalRaw] ?? goalRaw : null;
-        const activityLabel = activityRaw
-          ? activityLabelMap[activityRaw] ?? activityRaw
-          : null;
+        const activityLabel = activityRaw ? activityLabelMap[activityRaw] ?? activityRaw : null;
 
         setUserData({
           fullName,
@@ -148,7 +121,6 @@ export default function SummaryScreen() {
           activityLevel: activityLabel,
         });
       } catch (e) {
-        // If something goes wrong, keep the UI safe but we can debug via console during dev
         console.warn('Error loading onboarding data:', e);
       }
     };
@@ -156,7 +128,6 @@ export default function SummaryScreen() {
     loadAllOnboardingData();
   }, []);
 
-  // Label text for the units row so it reads nicely in the card
   const unitsLabel =
     userData.units === 'imperial'
       ? 'Imperial (ft / lbs)'
@@ -171,7 +142,7 @@ export default function SummaryScreen() {
     value && value.trim().length > 0 ? value : '—';
 
   const handleFinish = () => {
-    // Later: this is where we could compute calories/macros and write a profile record
+    // After summary → dashboard
     router.push('/setup/create-account');
   };
 
@@ -179,7 +150,6 @@ export default function SummaryScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Top check icon + title + subtitle + step progress (5/5) */}
       <View style={styles.header}>
         <View style={styles.iconCircle}>
           <Ionicons name="checkmark-outline" size={30} color="#FFFFFF" />
@@ -203,7 +173,7 @@ export default function SummaryScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
       >
-        {/* Personal card */}
+        {/* Personal */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconCircle}>
@@ -228,7 +198,7 @@ export default function SummaryScreen() {
           </View>
         </View>
 
-        {/* Physical stats card */}
+        {/* Physical stats */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconCircle}>
@@ -244,20 +214,16 @@ export default function SummaryScreen() {
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Height</Text>
-            <Text style={styles.rowValue}>
-              {displayOrLine(userData.heightText)}
-            </Text>
+            <Text style={styles.rowValue}>{displayOrLine(userData.heightText)}</Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Weight</Text>
-            <Text style={styles.rowValue}>
-              {displayOrLine(userData.weightText)}
-            </Text>
+            <Text style={styles.rowValue}>{displayOrLine(userData.weightText)}</Text>
           </View>
         </View>
 
-        {/* Goal & activity card */}
+        {/* Goal & activity */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.cardIconCircle}>
@@ -273,14 +239,11 @@ export default function SummaryScreen() {
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Activity level</Text>
-            <Text style={styles.rowValue}>
-              {displayOrDash(userData.activityLevel)}
-            </Text>
+            <Text style={styles.rowValue}>{displayOrDash(userData.activityLevel)}</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Footer: finish CTA + back link */}
       <View style={styles.footer}>
         <LinearGradient
           colors={['#4CA1DE', '#1E90D6']}
@@ -302,16 +265,9 @@ export default function SummaryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+  screen: { flex: 1, backgroundColor: '#FFFFFF' },
 
-  header: {
-    alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 16,
-  },
+  header: { alignItems: 'center', marginTop: 60, marginBottom: 16 },
   iconCircle: {
     width: 80,
     height: 80,
@@ -321,12 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0B2C5E',
-    textAlign: 'center',
-  },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#0B2C5E', textAlign: 'center' },
   headerSubtitle: {
     fontSize: 14,
     color: '#4CA1DE',
@@ -335,20 +286,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 
-  progressRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-  },
-  progressBar: {
-    width: 36,
-    height: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 999,
-  },
-  progressActive: {
-    backgroundColor: '#1E90D6',
-  },
+  progressRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  progressBar: { width: 36, height: 6, backgroundColor: '#E5E7EB', borderRadius: 999 },
+  progressActive: { backgroundColor: '#1E90D6' },
 
   card: {
     backgroundColor: '#F9FAFB',
@@ -357,12 +297,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 16,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
-  },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
   cardIconCircle: {
     width: 28,
     height: 28,
@@ -371,52 +306,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0B2C5E',
-  },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: '#0B2C5E' },
 
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  rowLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  rowValue: {
-    fontSize: 14,
-    color: '#111827',
-  },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  rowLabel: { fontSize: 14, color: '#6B7280' },
+  rowValue: { fontSize: 14, color: '#111827' },
 
-  helperText: {
-    fontSize: 12,
-    color: '#DC2626',
-    marginTop: 4,
-    marginBottom: 12,
-  },
-
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    backgroundColor: '#FFFFFF',
-  },
-  ctaWrap: {
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  ctaButton: {
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
+  footer: { paddingHorizontal: 20, paddingBottom: 24, backgroundColor: '#FFFFFF' },
+  ctaWrap: { borderRadius: 18, overflow: 'hidden' },
+  ctaButton: { paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
+  ctaText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
   backLink: {
     color: '#1E90D6',
     fontWeight: '700',
