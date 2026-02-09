@@ -50,9 +50,16 @@ export default function RootLayout() {
     const inSetup = seg0 === 'setup';
     const isLogin = seg0 === 'login';
 
-    //  If logged in → keep them inside tabs
+    // NEW: allow these routes while logged in
+    const isProfile = seg0 === 'profile';
+    const isSettings = seg0 === 'settings';
+    const isLogEntry = seg0 === 'log-entry';
+
+    //  If logged in → keep them inside tabs OR allowed pages
     if (userIsLoggedIn) {
-      if (!inTabs) router.replace('/(tabs)/dashboard');
+      if (!inTabs && !isProfile && !isSettings && !isLogEntry) {
+        router.replace('/(tabs)/dashboard');
+      }
       return;
     }
 
