@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { getMotivationEnabled, setMotivationEnabled } from '../lib/motivation';
+
 export default function Settings() {
-  const [notifications, setNotifications] = useState(true);
+  const [motivationEnabled, setMotivationEnabledState] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const enabled = await getMotivationEnabled();
+      setMotivationEnabledState(enabled);
+    })();
+  }, []);
+
+  const toggleMotivation = async (value: boolean) => {
+    setMotivationEnabledState(value);
+    await setMotivationEnabled(value);
+  };
 
   return (
     <View style={styles.screen}>
@@ -25,13 +39,13 @@ export default function Settings() {
 
         <View style={styles.card}>
           <View style={styles.row}>
-            <Ionicons name="notifications-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="sparkles-outline" size={18} color="#0B2C5E" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Notifications</Text>
-              <Text style={styles.rowSub}>Meal reminders and updates</Text>
+              <Text style={styles.rowTitle}>Motivational pop-ups</Text>
+              <Text style={styles.rowSub}>Show a daily reminder after login</Text>
             </View>
 
-            <Switch value={notifications} onValueChange={setNotifications} />
+            <Switch value={motivationEnabled} onValueChange={toggleMotivation} />
           </View>
 
           <View style={styles.divider} />
