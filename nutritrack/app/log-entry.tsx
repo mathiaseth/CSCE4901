@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useAppTheme } from '../lib/theme';
 
 export default function LogEntry() {
+  const { colors } = useAppTheme();
+
   const [foodName, setFoodName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -19,77 +22,101 @@ export default function LogEntry() {
   const formValid = foodName.trim().length > 0 && parseNum(calories) > 0;
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.title}>Log Entry</Text>
-          <Text style={styles.subtitle}>Add a meal and update your macros</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Log Entry</Text>
+          <Text style={[styles.subtitle, { color: colors.primary }]}>
+            Add a meal and update your macros
+          </Text>
         </View>
 
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
-          <Ionicons name="chevron-back" size={18} color="#0B2C5E" />
-          <Text style={styles.backText}>Back</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            styles.backBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={18} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>Back</Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Log food</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Log food</Text>
 
-        <View style={styles.inputCard}>
+        <View style={[styles.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TextInput
             placeholder="Food name (e.g., rice + chicken)"
             value={foodName}
             onChangeText={setFoodName}
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
+            style={[
+              styles.input,
+              { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+            ]}
+            placeholderTextColor={colors.subText}
           />
 
           <View style={styles.gridRow}>
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Calories</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Calories</Text>
               <TextInput
                 placeholder="0"
                 value={calories}
                 onChangeText={setCalories}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Protein</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Protein</Text>
               <TextInput
                 placeholder="0"
                 value={protein}
                 onChangeText={setProtein}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Carbs</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Carbs</Text>
               <TextInput
                 placeholder="0"
                 value={carbs}
                 onChangeText={setCarbs}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Fat</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Fat</Text>
               <TextInput
                 placeholder="0"
                 value={fat}
                 onChangeText={setFat}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
           </View>
@@ -111,7 +138,7 @@ export default function LogEntry() {
           </LinearGradient>
 
           {!formValid && (
-            <Text style={styles.helperText}>
+            <Text style={[styles.helperText, { color: colors.subText }]}>
               Add at least a name and calories to log an entry.
             </Text>
           )}

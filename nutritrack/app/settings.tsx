@@ -4,8 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { getMotivationEnabled, setMotivationEnabled } from '../lib/motivation';
+import { useAppTheme } from '../lib/theme';
 
 export default function Settings() {
+  const { mode, setMode, colors } = useAppTheme();
+
   const [motivationEnabled, setMotivationEnabledState] = useState(true);
 
   useEffect(() => {
@@ -20,67 +23,89 @@ export default function Settings() {
     await setMotivationEnabled(value);
   };
 
+  const toggleDarkMode = (value: boolean) => {
+    setMode(value ? 'dark' : 'light');
+  };
+
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Customize your experience</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.primary }]}>
+            Customize your experience
+          </Text>
         </View>
 
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
-          <Ionicons name="chevron-back" size={18} color="#0B2C5E" />
-          <Text style={styles.backText}>Back</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            styles.backBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={18} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>Back</Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.row}>
-            <Ionicons name="sparkles-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="sparkles-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Motivational pop-ups</Text>
-              <Text style={styles.rowSub}>Show a daily reminder after login</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Motivational pop-ups</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Show a daily reminder after login
+              </Text>
             </View>
 
             <Switch value={motivationEnabled} onValueChange={toggleMotivation} />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.row}>
-            <Ionicons name="swap-horizontal-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="moon-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Units</Text>
-              <Text style={styles.rowSub}>Grams, calories, and serving sizes</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Dark mode</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Switch between light and dark
+              </Text>
             </View>
-            <Text style={styles.rightHint}>Default</Text>
+
+            <Switch value={mode === 'dark'} onValueChange={toggleDarkMode} />
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.row}>
-            <Ionicons name="color-palette-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="swap-horizontal-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Theme</Text>
-              <Text style={styles.rowSub}>Light / Dark (coming soon)</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Units</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Grams, calories, and serving sizes
+              </Text>
             </View>
-            <Text style={styles.rightHint}>Light</Text>
+            <Text style={[styles.rightHint, { color: colors.subText }]}>Default</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Support</Text>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.row}>
-            <Ionicons name="help-circle-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="help-circle-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Help</Text>
-              <Text style={styles.rowSub}>FAQ and troubleshooting</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Help</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                FAQ and troubleshooting
+              </Text>
             </View>
           </View>
         </View>
@@ -90,7 +115,7 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 12 },
+  screen: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
 
   topBar: {
     flexDirection: 'row',
@@ -99,8 +124,8 @@ const styles = StyleSheet.create({
     marginTop: 44,
     marginBottom: 12,
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#0B2C5E' },
-  subtitle: { fontSize: 13, color: '#4CA1DE', marginTop: 2 },
+  title: { fontSize: 24, fontWeight: '800' },
+  subtitle: { fontSize: 13, marginTop: 2 },
 
   backBtn: {
     flexDirection: 'row',
@@ -110,26 +135,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
   },
-  backText: { color: '#0B2C5E', fontWeight: '800' },
+  backText: { fontWeight: '800' },
 
   section: { marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0B2C5E', marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 8 },
 
   card: {
-    backgroundColor: '#F9FAFB',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  rowTitle: { fontSize: 14, fontWeight: '900', color: '#0B2C5E' },
-  rowSub: { fontSize: 12, color: '#64748B', fontWeight: '700', marginTop: 2 },
-  rightHint: { color: '#64748B', fontWeight: '800', fontSize: 12 },
+  rowTitle: { fontSize: 14, fontWeight: '900' },
+  rowSub: { fontSize: 12, fontWeight: '700', marginTop: 2 },
+  rightHint: { fontWeight: '800', fontSize: 12 },
 
-  divider: { height: 1, backgroundColor: '#E5E7EB' },
+  divider: { height: 1 },
 });

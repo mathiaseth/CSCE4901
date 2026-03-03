@@ -2,65 +2,85 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useAppTheme } from '../lib/theme';
 
 export default function Profile() {
+  const { colors } = useAppTheme();
+
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.title}>Profile</Text>
-          <Text style={styles.subtitle}>Your account and macro targets</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+          <Text style={[styles.subtitle, { color: colors.primary }]}>
+            Your account and macro targets
+          </Text>
         </View>
 
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
-          <Ionicons name="chevron-back" size={18} color="#0B2C5E" />
-          <Text style={styles.backText}>Back</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={[
+            styles.backBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={18} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>Back</Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.row}>
-            <Ionicons name="person-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="person-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Name</Text>
-              <Text style={styles.rowSub}>Add your display name</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Name</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Add your display name
+              </Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.row}>
-            <Ionicons name="mail-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="mail-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Email</Text>
-              <Text style={styles.rowSub}>View your email address</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Email</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                View your email address
+              </Text>
             </View>
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Goals</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Goals</Text>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.row}>
-            <Ionicons name="barbell-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="barbell-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Daily calories</Text>
-              <Text style={styles.rowSub}>Set your kcal target</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Daily calories</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Set your kcal target
+              </Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.row}>
-            <Ionicons name="nutrition-outline" size={18} color="#0B2C5E" />
+            <Ionicons name="nutrition-outline" size={18} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Macros</Text>
-              <Text style={styles.rowSub}>Set protein, carbs, and fat goals</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Macros</Text>
+              <Text style={[styles.rowSub, { color: colors.subText }]}>
+                Set protein, carbs, and fat goals
+              </Text>
             </View>
           </View>
         </View>

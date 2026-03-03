@@ -23,6 +23,15 @@ import {
   randomQuote,
 } from '../lib/motivation';
 
+// Theme
+import {
+  ThemeContext,
+  colorsFor,
+  getThemeMode,
+  setThemeMode,
+  type AppThemeMode,
+} from '../lib/theme';
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
@@ -36,6 +45,22 @@ export default function RootLayout() {
 
   const segments = useSegments();
   const router = useRouter();
+
+  // Theme state
+  const [themeMode, setThemeModeState] = useState<AppThemeMode>('light');
+  const colors = colorsFor(themeMode);
+
+  useEffect(() => {
+    (async () => {
+      const saved = await getThemeMode();
+      setThemeModeState(saved);
+    })();
+  }, []);
+
+  const updateThemeMode = (mode: AppThemeMode) => {
+    setThemeModeState(mode);
+    setThemeMode(mode).catch(() => {});
+  };
 
   // Popup overlay state (web-safe)
   const [motivationVisible, setMotivationVisible] = useState(false);
@@ -123,26 +148,28 @@ export default function RootLayout() {
   }, [appReady]);
 
   return appReady ? (
-    <View style={{ flex: 1 }}>
-      <Slot />
+    <ThemeContext.Provider value={{ mode: themeMode, colors, setMode: updateThemeMode }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <Slot />
 
-      {motivationVisible && (
-        <View style={styles.overlay} pointerEvents="auto">
-          <View style={styles.card}>
-            <Text style={styles.title}>Daily reminder</Text>
-            <Text style={styles.body}>{motivationText}</Text>
+        {motivationVisible && (
+          <View style={styles.overlay} pointerEvents="auto">
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.title, { color: colors.text }]}>Daily reminder</Text>
+              <Text style={[styles.body, { color: colors.subText }]}>{motivationText}</Text>
 
-            <Pressable
-              onPress={() => setMotivationVisible(false)}
-              style={styles.button}
-              hitSlop={10}
-            >
-              <Text style={styles.buttonText}>Let’s go</Text>
-            </Pressable>
+              <Pressable
+                onPress={() => setMotivationVisible(false)}
+                style={[styles.button, { backgroundColor: colors.primary }]}
+                hitSlop={10}
+              >
+                <Text style={styles.buttonText}>Let’s go</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      )}
-    </View>
+        )}
+      </View>
+    </ThemeContext.Provider>
   ) : null;
 }
 
@@ -164,27 +191,22 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
     padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   title: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#0B2C5E',
     marginBottom: 8,
   },
   body: {
     fontSize: 14,
-    color: '#334155',
     fontWeight: '700',
     marginBottom: 14,
     lineHeight: 20,
   },
   button: {
     alignSelf: 'flex-end',
-    backgroundColor: '#1E90D6',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,

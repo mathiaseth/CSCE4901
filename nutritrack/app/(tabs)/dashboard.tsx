@@ -17,6 +17,8 @@ import { router } from 'expo-router';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
+import { useAppTheme } from '../../lib/theme';
+
 type FoodItem = {
   id: string;
   name: string;
@@ -27,6 +29,8 @@ type FoodItem = {
 };
 
 export default function DashboardScreen() {
+  const { colors, mode } = useAppTheme();
+
   const [foodName, setFoodName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -88,17 +92,29 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={mode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background as any}
+      />
 
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.title}>Dashboard</Text>
-          <Text style={styles.subtitle}>Track meals and hit your macros</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Dashboard</Text>
+          <Text style={[styles.subtitle, { color: colors.primary }]}>
+            Track meals and hit your macros
+          </Text>
         </View>
 
-        <Pressable onPress={handleSignOut} style={styles.signOutBtn} hitSlop={10}>
-          <Text style={styles.signOutText}>Sign out</Text>
+        <Pressable
+          onPress={handleSignOut}
+          style={[
+            styles.signOutBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
+          hitSlop={10}
+        >
+          <Text style={[styles.signOutText, { color: colors.text }]}>Sign out</Text>
         </Pressable>
       </View>
 
@@ -132,63 +148,78 @@ export default function DashboardScreen() {
       </LinearGradient>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Log food</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Log food</Text>
 
-        <View style={styles.inputCard}>
+        <View style={[styles.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TextInput
             placeholder="Food name (e.g., rice + chicken)"
             value={foodName}
             onChangeText={setFoodName}
-            style={styles.input}
-            placeholderTextColor="#9CA3AF"
+            style={[
+              styles.input,
+              { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+            ]}
+            placeholderTextColor={colors.subText}
           />
 
           <View style={styles.gridRow}>
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Calories</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Calories</Text>
               <TextInput
                 placeholder="0"
                 value={calories}
                 onChangeText={setCalories}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Protein</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Protein</Text>
               <TextInput
                 placeholder="0"
                 value={protein}
                 onChangeText={setProtein}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Carbs</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Carbs</Text>
               <TextInput
                 placeholder="0"
                 value={carbs}
                 onChangeText={setCarbs}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
 
             <View style={styles.gridCol}>
-              <Text style={styles.inputLabel}>Fat</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Fat</Text>
               <TextInput
                 placeholder="0"
                 value={fat}
                 onChangeText={setFat}
                 keyboardType="numeric"
-                style={styles.smallInput}
-                placeholderTextColor="#9CA3AF"
+                style={[
+                  styles.smallInput,
+                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
+                ]}
+                placeholderTextColor={colors.subText}
               />
             </View>
           </View>
@@ -210,7 +241,7 @@ export default function DashboardScreen() {
           </LinearGradient>
 
           {!formValid && (
-            <Text style={styles.helperText}>
+            <Text style={[styles.helperText, { color: colors.subText }]}>
               Add at least a name and calories to log an entry.
             </Text>
           )}
@@ -218,17 +249,17 @@ export default function DashboardScreen() {
       </View>
 
       <View style={[styles.section, { flex: 1 }]}>
-        <Text style={styles.sectionTitle}>Today’s entries</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today’s entries</Text>
 
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <View style={styles.foodRow}>
+            <View style={[styles.foodRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.foodName}>{item.name}</Text>
-                <Text style={styles.foodMacros}>
+                <Text style={[styles.foodName, { color: colors.text }]}>{item.name}</Text>
+                <Text style={[styles.foodMacros, { color: colors.subText }]}>
                   {item.calories} kcal • P{item.protein} • C{item.carbs} • F{item.fat}
                 </Text>
               </View>
@@ -239,9 +270,11 @@ export default function DashboardScreen() {
             </View>
           )}
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Ionicons name="nutrition-outline" size={26} color="#94A3B8" />
-              <Text style={styles.emptyText}>No entries yet. Log your first meal.</Text>
+            <View style={[styles.emptyBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="nutrition-outline" size={26} color={colors.subText} />
+              <Text style={[styles.emptyText, { color: colors.subText }]}>
+                No entries yet. Log your first meal.
+              </Text>
             </View>
           }
         />
@@ -363,20 +396,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyText: { marginTop: 8, color: '#64748B', fontWeight: '700', fontSize: 13 },
-
-  quickLinks: { marginTop: 6 },
-  quickRow: { flexDirection: 'row', gap: 10, marginTop: 6 },
-  quickBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    paddingVertical: 12,
-    borderRadius: 14,
-  },
-  quickText: { color: '#0B2C5E', fontWeight: '900', fontSize: 13 },
 });
