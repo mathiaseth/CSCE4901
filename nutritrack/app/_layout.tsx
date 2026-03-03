@@ -32,6 +32,9 @@ import {
   type AppThemeMode,
 } from '../lib/theme';
 
+// 🔥 NEW: Nutrition Context
+import { NutritionProvider } from '../context/NutritionContext';
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
@@ -62,15 +65,14 @@ export default function RootLayout() {
     setThemeMode(mode).catch(() => {});
   };
 
-  // Popup overlay state (web-safe)
+  // Motivation popup state
   const [motivationVisible, setMotivationVisible] = useState(false);
   const [motivationText, setMotivationText] = useState('');
 
-  // refs so timer survives re-renders
   const prevLoggedInRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Listen to Firebase Auth state
+  // Firebase auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUserIsLoggedIn(!!user);
@@ -82,17 +84,17 @@ export default function RootLayout() {
 
   const appReady = fontsLoaded && authReady;
 
-  // Route guard based on auth
+  // Route guard
   useEffect(() => {
     if (!appReady) return;
 
-    const seg0 = segments[0]; // '(onboarding)' | '(tabs)' | 'setup' | 'login' | etc.
+    const seg0 = segments[0];
+
     const inOnboarding = seg0 === '(onboarding)';
     const inTabs = seg0 === '(tabs)';
     const inSetup = seg0 === 'setup';
     const isLogin = seg0 === 'login';
 
-    // Allow these routes while logged in
     const isProfile = seg0 === 'profile';
     const isSettings = seg0 === 'settings';
     const isLogEntry = seg0 === 'log-entry';
@@ -109,7 +111,7 @@ export default function RootLayout() {
     router.replace('/(onboarding)');
   }, [appReady, userIsLoggedIn, segments, router]);
 
-  // Motivation pop-up: once per day, 5 seconds after login
+  // Motivation popup logic
   useEffect(() => {
     if (!appReady) return;
 
@@ -142,34 +144,53 @@ export default function RootLayout() {
     };
   }, [appReady, userIsLoggedIn]);
 
-  // Hide splash when ready
+  // Hide splash
   useEffect(() => {
     if (appReady) SplashScreen.hideAsync().catch(() => {});
   }, [appReady]);
 
   return appReady ? (
-    <ThemeContext.Provider value={{ mode: themeMode, colors, setMode: updateThemeMode }}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Slot />
+    <NutritionProvider>
+      <ThemeContext.Provider
+        value={{ mode: themeMode, colors, setMode: updateThemeMode }}
+      >
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <Slot />
 
-        {motivationVisible && (
-          <View style={styles.overlay} pointerEvents="auto">
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.title, { color: colors.text }]}>Daily reminder</Text>
-              <Text style={[styles.body, { color: colors.subText }]}>{motivationText}</Text>
-
-              <Pressable
-                onPress={() => setMotivationVisible(false)}
-                style={[styles.button, { backgroundColor: colors.primary }]}
-                hitSlop={10}
+          {motivationVisible && (
+            <View style={styles.overlay} pointerEvents="auto">
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
               >
-                <Text style={styles.buttonText}>Let’s go</Text>
-              </Pressable>
+                <Text style={[styles.title, { color: colors.text }]}>
+                  Daily reminder
+                </Text>
+                <Text style={[styles.body, { color: colors.subText }]}>
+                  {motivationText}
+                </Text>
+
+                <Pressable
+                  onPress={() => setMotivationVisible(false)}
+                  style={[
+                    styles.button,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  hitSlop={10}
+                >
+                  <Text style={styles.buttonText}>Let’s go</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        )}
-      </View>
-    </ThemeContext.Provider>
+          )}
+        </View>
+      </ThemeContext.Provider>
+    </NutritionProvider>
   ) : null;
 }
 

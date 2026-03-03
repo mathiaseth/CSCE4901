@@ -12,7 +12,7 @@ const firebaseConfig = {
   storageBucket: "nutrifit-31b64.firebasestorage.app",
   messagingSenderId: "397234740919",
   appId: "1:397234740919:web:d26d480044eeef7f66f732",
-  measurementId: "G-4YK07J70E5"
+  tmeasurementId: "G-4YK07J70E5"
 };
 
 // Prevent re-initializing in Expo Fast Refresh

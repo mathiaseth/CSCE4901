@@ -1,222 +1,232 @@
+// app/(tabs)/log-entry.tsx
+
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Modal,
+  TextInput,
+  StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useAppTheme } from '../lib/theme';
+import { useNutrition } from '../context/NutritionContext';
 
-export default function LogEntry() {
-  const { colors } = useAppTheme();
+type FoodItem = {
+  id: string;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
 
-  const [foodName, setFoodName] = useState('');
-  const [calories, setCalories] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [fat, setFat] = useState('');
+type MealKey = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks';
 
-  const parseNum = (v: string) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
+const PRESET_FOODS: FoodItem[] = [
+  { id: '1', name: 'Eggs (2 large)', calories: 140, protein: 12, carbs: 1, fat: 10 },
+  { id: '2', name: 'White Rice (1 cup)', calories: 205, protein: 4, carbs: 45, fat: 0 },
+  { id: '3', name: 'Chicken Breast (4 oz)', calories: 180, protein: 35, carbs: 0, fat: 3 },
+  { id: '4', name: 'Whole Wheat Bread (2 slices)', calories: 160, protein: 8, carbs: 28, fat: 2 },
+  { id: '5', name: 'Banana', calories: 105, protein: 1, carbs: 27, fat: 0 },
+  { id: '6', name: 'Greek Yogurt', calories: 130, protein: 18, carbs: 6, fat: 3 },
+  { id: '7', name: 'Ground Turkey', calories: 170, protein: 22, carbs: 0, fat: 8 },
+  { id: '8', name: 'Oatmeal', calories: 150, protein: 5, carbs: 27, fat: 3 },
+  { id: '9', name: 'Peanut Butter', calories: 190, protein: 8, carbs: 6, fat: 16 },
+  { id: '10', name: 'Protein Shake', calories: 120, protein: 25, carbs: 3, fat: 1 },
+];
 
-  const formValid = foodName.trim().length > 0 && parseNum(calories) > 0;
+function formatDate(d: Date) {
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+export default function LogEntryScreen() {
+  const { addCalories } = useNutrition();
+
+  const [meals, setMeals] = useState<Record<MealKey, FoodItem[]>>({
+    Breakfast: [],
+    Lunch: [],
+    Dinner: [],
+    Snacks: [],
+  });
+
+  const [selectedMeal, setSelectedMeal] = useState<MealKey>('Breakfast');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [foodModalOpen, setFoodModalOpen] = useState(false);
+
+  function addFoodToMeal(food: FoodItem) {
+    setMeals((prev) => ({
+      ...prev,
+      [selectedMeal]: [...prev[selectedMeal], food],
+    }));
+
+    addCalories(food.calories);
+    setFoodModalOpen(false);
+    setSearchQuery('');
+  }
+
+  function getMealCalories(meal: MealKey) {
+    return meals[meal].reduce((sum, f) => sum + f.calories, 0);
+  }
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View style={styles.topBar}>
-        <View>
-          <Text style={[styles.title, { color: colors.text }]}>Log Entry</Text>
-          <Text style={[styles.subtitle, { color: colors.primary }]}>
-            Add a meal and update your macros
-          </Text>
-        </View>
+    <View style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-        <Pressable
-          onPress={() => router.back()}
-          style={[
-            styles.backBtn,
-            { borderColor: colors.border, backgroundColor: colors.card },
-          ]}
-          hitSlop={10}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={[styles.backText, { color: colors.text }]}>Back</Text>
-        </Pressable>
-      </View>
+      <ScrollView contentContainerStyle={styles.scroll}>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Log food</Text>
+        {/* Title */}
+        <Text style={styles.title}>Food Log</Text>
+        <Text style={styles.date}>{formatDate(new Date())}</Text>
 
-        <View style={[styles.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TextInput
-            placeholder="Food name (e.g., rice + chicken)"
-            value={foodName}
-            onChangeText={setFoodName}
-            style={[
-              styles.input,
-              { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
-            ]}
-            placeholderTextColor={colors.subText}
-          />
-
-          <View style={styles.gridRow}>
-            <View style={styles.gridCol}>
-              <Text style={[styles.inputLabel, { color: colors.subText }]}>Calories</Text>
-              <TextInput
-                placeholder="0"
-                value={calories}
-                onChangeText={setCalories}
-                keyboardType="numeric"
-                style={[
-                  styles.smallInput,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
-                ]}
-                placeholderTextColor={colors.subText}
-              />
+        {(['Breakfast', 'Lunch', 'Dinner', 'Snacks'] as MealKey[]).map((meal) => (
+          <View key={meal} style={styles.mealCard}>
+            <View style={styles.mealHeader}>
+              <Text style={styles.mealTitle}>{meal}</Text>
+              <Text style={styles.mealCalories}>{getMealCalories(meal)} cal</Text>
             </View>
 
-            <View style={styles.gridCol}>
-              <Text style={[styles.inputLabel, { color: colors.subText }]}>Protein</Text>
-              <TextInput
-                placeholder="0"
-                value={protein}
-                onChangeText={setProtein}
-                keyboardType="numeric"
-                style={[
-                  styles.smallInput,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
-                ]}
-                placeholderTextColor={colors.subText}
-              />
-            </View>
+            {meals[meal].map((food, index) => (
+              <View key={index} style={styles.foodRow}>
+                <Text style={styles.foodName}>{food.name}</Text>
+                <Text style={styles.foodMacros}>
+                  {food.calories} cal • P {food.protein}g • C {food.carbs}g • F {food.fat}g
+                </Text>
+              </View>
+            ))}
 
-            <View style={styles.gridCol}>
-              <Text style={[styles.inputLabel, { color: colors.subText }]}>Carbs</Text>
-              <TextInput
-                placeholder="0"
-                value={carbs}
-                onChangeText={setCarbs}
-                keyboardType="numeric"
-                style={[
-                  styles.smallInput,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
-                ]}
-                placeholderTextColor={colors.subText}
-              />
-            </View>
-
-            <View style={styles.gridCol}>
-              <Text style={[styles.inputLabel, { color: colors.subText }]}>Fat</Text>
-              <TextInput
-                placeholder="0"
-                value={fat}
-                onChangeText={setFat}
-                keyboardType="numeric"
-                style={[
-                  styles.smallInput,
-                  { backgroundColor: colors.background, color: colors.text, borderColor: colors.border },
-                ]}
-                placeholderTextColor={colors.subText}
-              />
-            </View>
-          </View>
-
-          <LinearGradient
-            colors={formValid ? ['#4CA1DE', '#1E90D6'] : ['#C7D2FE', '#A5B4FC']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.addWrap}
-          >
             <Pressable
-              onPress={() => router.back()}
-              disabled={!formValid}
-              style={[styles.addBtn, !formValid && { opacity: 0.75 }]}
+              onPress={() => {
+                setSelectedMeal(meal);
+                setFoodModalOpen(true);
+              }}
             >
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text style={styles.addText}>Add entry</Text>
+              <Text style={styles.addFoodText}>+ Add Food</Text>
             </Pressable>
-          </LinearGradient>
+          </View>
+        ))}
+      </ScrollView>
 
-          {!formValid && (
-            <Text style={[styles.helperText, { color: colors.subText }]}>
-              Add at least a name and calories to log an entry.
-            </Text>
-          )}
-        </View>
-      </View>
+      {/* Modal */}
+      <Modal visible={foodModalOpen} animationType="slide" transparent>
+        <Pressable style={styles.modalBackdrop} onPress={() => setFoodModalOpen(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <TextInput
+              placeholder="Search food..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+            />
+
+            <ScrollView>
+              {PRESET_FOODS.filter((food) =>
+                food.name.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map((food) => (
+                <Pressable
+                  key={food.id}
+                  style={styles.foodOption}
+                  onPress={() => addFoodToMeal(food)}
+                >
+                  <Text style={styles.foodName}>{food.name}</Text>
+                  <Text style={styles.foodMacros}>
+                    {food.calories} cal • P {food.protein}g • C {food.carbs}g • F {food.fat}g
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 12 },
+  screen: { flex: 1, backgroundColor: '#FFFFFF' },
+  scroll: { padding: 20, paddingTop: 60 },
 
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginTop: 44,
-    marginBottom: 12,
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0B2C5E',
   },
-  title: { fontSize: 24, fontWeight: '800', color: '#0B2C5E' },
-  subtitle: { fontSize: 13, color: '#4CA1DE', marginTop: 2 },
 
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
+  date: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 20,
   },
-  backText: { color: '#0B2C5E', fontWeight: '800' },
 
-  section: { marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#0B2C5E', marginBottom: 8 },
-
-  inputCard: {
-    backgroundColor: '#F9FAFB',
+  mealCard: {
     borderRadius: 18,
-    padding: 14,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: '#FFFFFF',
-    color: '#0F172A',
+    padding: 16,
+    marginBottom: 16,
   },
 
-  gridRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  gridCol: { flex: 1 },
-  inputLabel: { fontSize: 11, color: '#64748B', marginBottom: 4, fontWeight: '700' },
-  smallInput: {
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-    fontSize: 14,
-    backgroundColor: '#FFFFFF',
-    color: '#0F172A',
-  },
-
-  addWrap: { borderRadius: 14, overflow: 'hidden', marginTop: 12 },
-  addBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  mealHeader: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  addText: { color: '#fff', fontSize: 15, fontWeight: '900' },
-  helperText: { marginTop: 8, color: '#64748B', fontSize: 12 },
+
+  mealTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0B2C5E',
+  },
+
+  mealCalories: {
+    fontWeight: '900',
+    color: '#1E90D6',
+  },
+
+  foodRow: { marginBottom: 8 },
+
+  foodName: { fontWeight: '900', color: '#0B2C5E' },
+
+  foodMacros: { fontSize: 12, color: '#64748B', fontWeight: '700' },
+
+  addFoodText: {
+    color: '#1E90D6',
+    fontWeight: '900',
+    marginTop: 10,
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'flex-end',
+  },
+
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    maxHeight: '80%',
+  },
+
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+
+  foodOption: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+  },
 });
