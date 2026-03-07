@@ -32,8 +32,10 @@ import {
   type AppThemeMode,
 } from '../lib/theme';
 
-// 🔥 NEW: Nutrition Context
+// Nutrition & Water contexts
 import { NutritionProvider } from '../context/NutritionContext';
+import { WaterProvider } from '../context/WaterContext';
+import { scheduleWaterReminders } from '../lib/waterReminders';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -81,6 +83,12 @@ export default function RootLayout() {
 
     return unsub;
   }, []);
+
+  // Schedule daily water reminders when user is logged in
+  useEffect(() => {
+    if (!authReady || !userIsLoggedIn) return;
+    scheduleWaterReminders().catch(() => {});
+  }, [authReady, userIsLoggedIn]);
 
   const appReady = fontsLoaded && authReady;
 
@@ -151,9 +159,10 @@ export default function RootLayout() {
 
   return appReady ? (
     <NutritionProvider>
-      <ThemeContext.Provider
-        value={{ mode: themeMode, colors, setMode: updateThemeMode }}
-      >
+      <WaterProvider>
+        <ThemeContext.Provider
+          value={{ mode: themeMode, colors, setMode: updateThemeMode }}
+        >
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           <Slot />
 
@@ -189,7 +198,8 @@ export default function RootLayout() {
             </View>
           )}
         </View>
-      </ThemeContext.Provider>
+        </ThemeContext.Provider>
+      </WaterProvider>
     </NutritionProvider>
   ) : null;
 }
