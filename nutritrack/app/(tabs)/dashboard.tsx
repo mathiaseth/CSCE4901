@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Line, Text as SvgText } from 'react-native-svg';
 import { useContext } from 'react';
 import { ThemeContext } from '../../lib/theme';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../lib/firebase';
+import { router } from 'expo-router';
 function formatDateLong(d: Date) {
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -382,8 +385,15 @@ export default function DashboardScreen() {
         {/* Today */}
         <View style={styles.todayRow}>
           <Text style={styles.todayTitle}>Today</Text>
-          <Pressable style={styles.editBtn} hitSlop={10}>
-            <Text style={styles.editText}>Edit</Text>
+          <Pressable
+            style={styles.editBtn}
+            hitSlop={10}
+            onPress={async () => {
+              await signOut(auth);
+              router.replace('/login');
+            }}
+          >
+            <Text style={styles.editText}>Logout</Text>
           </Pressable>
         </View>
 
