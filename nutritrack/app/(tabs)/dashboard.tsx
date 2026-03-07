@@ -1,9 +1,11 @@
 // app/(tabs)/dashboard.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNutrition } from '../../context/NutritionContext';
+import { useWater } from '../../context/WaterContext';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   StatusBar,
   ScrollView,
@@ -13,11 +15,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Line, Text as SvgText } from 'react-native-svg';
+import Animated, {
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useContext } from 'react';
 import { ThemeContext } from '../../lib/theme';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { router } from 'expo-router';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 function formatDateLong(d: Date) {
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -278,6 +287,14 @@ export default function DashboardScreen() {
 
   // Fake “today” values for now 
   const { consumedCalories } = useNutrition();
+  const {
+    waterTodayMl,
+    waterGoalMl,
+    addWater,
+    resetWaterToday,
+    waterFromTrackerMl,
+  } = useWater();
+  const [waterInputMl, setWaterInputMl] = useState('');
   const [caloriesBurned] = useState<number>(0); 
   const [stepsToday] = useState<number>(0);
   const [workouts] = useState<number>(0);
@@ -351,12 +368,34 @@ export default function DashboardScreen() {
     return Math.min(consumedCalories / CAL_GOAL, 1);
   }, [consumedCalories, CAL_GOAL]);
 
+  // Water: total = manual + from tracker, progress for circle
+  const waterTotalMl = waterTodayMl + waterFromTrackerMl;
+  const waterProgress = useMemo(() => {
+    if (waterGoalMl <= 0) return 0;
+    return Math.min(waterTotalMl / waterGoalMl, 1);
+  }, [waterTotalMl, waterGoalMl]);
+
   // Circle progress setup
   const SIZE = 170;
   const STROKE = 14;
   const R = (SIZE - STROKE) / 2;
   const C = 2 * Math.PI * R;
   const dashOffset = C * (1 - progress);
+
+  // Water circle (smaller) — animated
+  const WATER_SIZE = 120;
+  const WATER_STROKE = 10;
+  const WATER_R = (WATER_SIZE - WATER_STROKE) / 2;
+  const WATER_C = 2 * Math.PI * WATER_R;
+  const waterOffsetShared = useSharedValue(WATER_C);
+  useEffect(() => {
+    waterOffsetShared.value = withTiming(WATER_C * (1 - waterProgress), {
+      duration: 400,
+    });
+  }, [waterProgress, WATER_C]);
+  const animatedWaterProps = useAnimatedProps(() => ({
+    strokeDashoffset: waterOffsetShared.value,
+  }));
 
   const todayLabel = formatDateLong(new Date());
 
@@ -481,6 +520,104 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.breakValue}>{caloriesBurned}</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Water intake */}
+        <Text style={styles.waterSectionTitle}>Water</Text>
+        <View style={styles.waterCard}>
+          <View style={styles.waterCircleWrap}>
+            <Svg width={WATER_SIZE} height={WATER_SIZE}>
+              <Circle
+                cx={WATER_SIZE / 2}
+                cy={WATER_SIZE / 2}
+                r={WATER_R}
+                stroke="#E5E7EB"
+                strokeWidth={WATER_STROKE}
+                fill="none"
+              />
+              <AnimatedCircle
+                cx={WATER_SIZE / 2}
+                cy={WATER_SIZE / 2}
+                r={WATER_R}
+                stroke="#1E90D6"
+                strokeWidth={WATER_STROKE}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${WATER_C} ${WATER_C}`}
+                rotation="-90"
+                originX={WATER_SIZE / 2}
+                originY={WATER_SIZE / 2}
+                animatedProps={animatedWaterProps}
+              />
+            </Svg>
+            <View style={styles.waterCircleCenter}>
+              <Text style={styles.waterCircleNumber}>{waterTotalMl}</Text>
+              <Text style={styles.waterCircleLabel}>ml of {waterGoalMl}</Text>
+            </View>
+          </View>
+          <View style={styles.waterRight}>
+            <View style={styles.waterBreakRow}>
+              <Ionicons name="water-outline" size={18} color="#1E90D6" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.breakLabel}>Goal</Text>
+              </View>
+              <Text style={styles.breakValue}>{waterGoalMl} ml</Text>
+            </View>
+            <View style={styles.waterBreakRow}>
+              <Ionicons name="add-circle-outline" size={18} color="#0B2C5E" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.breakLabel}>Logged</Text>
+              </View>
+              <Text style={styles.breakValue}>{waterTodayMl} ml</Text>
+            </View>
+            {waterFromTrackerMl > 0 && (
+              <View style={styles.waterBreakRow}>
+                <Ionicons name="fitness-outline" size={18} color="#64748B" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.breakLabel}>From tracker</Text>
+                </View>
+                <Text style={styles.breakValue}>{waterFromTrackerMl} ml</Text>
+              </View>
+            )}
+            <View style={styles.waterInputRow}>
+              <TextInput
+                style={styles.waterInput}
+                placeholder="Amount (ml)"
+                placeholderTextColor="#94A3B8"
+                value={waterInputMl}
+                onChangeText={setWaterInputMl}
+                keyboardType="number-pad"
+              />
+              <Pressable
+                style={styles.waterAddBtn}
+                onPress={() => {
+                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                  if (!Number.isNaN(ml) && ml > 0) {
+                    addWater(ml);
+                    setWaterInputMl('');
+                  }
+                }}
+              >
+                <Text style={styles.waterAddBtnText}>Add</Text>
+              </Pressable>
+              <Pressable
+                style={styles.waterSubtractBtn}
+                onPress={() => {
+                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                  if (!Number.isNaN(ml) && ml > 0) {
+                    addWater(-ml);
+                    setWaterInputMl('');
+                  }
+                }}
+              >
+                <Text style={styles.waterSubtractBtnText}>Subtract</Text>
+              </Pressable>
+            </View>
+            <Pressable style={styles.waterResetBtn} onPress={resetWaterToday}>
+              <Ionicons name="refresh-outline" size={16} color="#64748B" />
+              <Text style={styles.waterResetBtnText}>Reset today</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -790,6 +927,73 @@ const styles = StyleSheet.create({
   breakRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   breakLabel: { color: '#64748B', fontWeight: '800' },
   breakValue: { color: '#0B2C5E', fontWeight: '900', fontSize: 18 },
+
+  waterSectionTitle: {
+    color: '#0B2C5E',
+    fontWeight: '900',
+    fontSize: 26,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  waterCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+    gap: 16,
+  },
+  waterCircleWrap: { alignItems: 'center', justifyContent: 'center' },
+  waterCircleCenter: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  waterCircleNumber: { color: '#0B2C5E', fontSize: 24, fontWeight: '900' },
+  waterCircleLabel: { color: '#64748B', fontWeight: '800', fontSize: 11, marginTop: 2 },
+  waterRight: { flex: 1, gap: 10 },
+  waterBreakRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  waterInputRow: { flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' },
+  waterInput: {
+    flex: 1,
+    minWidth: 100,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    color: '#0B2C5E',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  waterAddBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#1E90D6',
+  },
+  waterAddBtnText: { color: '#FFFFFF', fontWeight: '900', fontSize: 15 },
+  waterSubtractBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  waterSubtractBtnText: { color: '#0B2C5E', fontWeight: '900', fontSize: 15 },
+  waterResetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  waterResetBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
 
   bentoTitle: { color: '#0B2C5E', fontWeight: '900', fontSize: 18, marginBottom: 10 },
   bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
