@@ -1,6 +1,6 @@
 // app/(tabs)/log-entry.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,17 @@ import {
   TextInput,
   StatusBar,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNutrition } from '../context/NutritionContext';
+import { useWater } from '../context/WaterContext';
+import type { FoodItem, MealKey } from '../types/nutrition';
 
-type FoodItem = {
-  id: string;
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
+const MEAL_KEYS: MealKey[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 
-type MealKey = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks';
+function isMealKey(v: unknown): v is MealKey {
+  return MEAL_KEYS.includes(v as MealKey);
+}
 
 const PRESET_FOODS: FoodItem[] = [
   { id: '1', name: 'Eggs (2 large)', calories: 140, protein: 12, carbs: 1, fat: 10 },
@@ -48,6 +46,15 @@ function formatDate(d: Date) {
 
 export default function LogEntryScreen() {
   const { addCalories } = useNutrition();
+  const { waterTodayMl, waterGoalMl, addWater, resetWaterToday, waterFromTrackerMl } = useWater();
+
+  const params = useLocalSearchParams<{
+    meal?: string;
+    foods?: string;
+  }>();
+
+  const mealParam = typeof params.meal === 'string' ? params.meal : undefined;
+  const foodsParam = typeof params.foods === 'string' ? params.foods : undefined;
 
   const [meals, setMeals] = useState<Record<MealKey, FoodItem[]>>({
     Breakfast: [],
@@ -59,6 +66,38 @@ export default function LogEntryScreen() {
   const [selectedMeal, setSelectedMeal] = useState<MealKey>('Breakfast');
   const [searchQuery, setSearchQuery] = useState('');
   const [foodModalOpen, setFoodModalOpen] = useState(false);
+
+  const [waterInputMl, setWaterInputMl] = useState('');
+
+  const didPrefillRef = useRef(false);
+
+  useEffect(() => {
+    if (didPrefillRef.current) return;
+    if (!mealParam || !foodsParam) return;
+    if (!isMealKey(mealParam)) return;
+
+    let parsed: FoodItem[] | null = null;
+    try {
+      parsed = JSON.parse(foodsParam) as FoodItem[];
+    } catch {
+      parsed = null;
+    }
+
+    if (!parsed || !Array.isArray(parsed) || parsed.length === 0) return;
+
+    didPrefillRef.current = true;
+    const nextMeals: Record<MealKey, FoodItem[]> = {
+      Breakfast: [],
+      Lunch: [],
+      Dinner: [],
+      Snacks: [],
+    };
+    nextMeals[mealParam] = parsed;
+
+    setMeals(nextMeals);
+    setSelectedMeal(mealParam);
+    for (const food of parsed) addCalories(food.calories);
+  }, [addCalories, foodsParam, mealParam]);
 
   function addFoodToMeal(food: FoodItem) {
     setMeals((prev) => ({
@@ -111,6 +150,57 @@ export default function LogEntryScreen() {
             </Pressable>
           </View>
         ))}
+
+        {/* Water Log (matches the meal card format) */}
+        <View style={styles.waterCard}>
+          <View style={styles.mealHeader}>
+            <Text style={styles.waterTitle}>Water Log</Text>
+          </View>
+
+          <View style={styles.waterInputRow}>
+            <TextInput
+              style={styles.waterInput}
+              placeholder="Amount (ml)"
+              placeholderTextColor="#94A3B8"
+              value={waterInputMl}
+              onChangeText={setWaterInputMl}
+              keyboardType="number-pad"
+            />
+
+            <View style={styles.waterBtnsCol}>
+              <Pressable
+                style={styles.waterAddBtn}
+                onPress={() => {
+                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                  if (!Number.isNaN(ml) && ml > 0) {
+                    addWater(ml);
+                    setWaterInputMl('');
+                  }
+                }}
+              >
+                <Text style={styles.waterAddBtnText}>Add</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.waterSubtractBtn}
+                onPress={() => {
+                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                  if (!Number.isNaN(ml) && ml > 0) {
+                    addWater(-ml);
+                    setWaterInputMl('');
+                  }
+                }}
+              >
+                <Text style={styles.waterSubtractBtnText}>Subtract</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <Pressable style={styles.waterResetBtn} onPress={resetWaterToday}>
+            <Ionicons name="refresh-outline" size={16} color="#64748B" />
+            <Text style={styles.waterResetBtnText}>Reset today</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {/* Modal */}
@@ -201,6 +291,65 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 10,
   },
+
+  waterCard: {
+    borderRadius: 18,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    marginBottom: 24,
+  },
+
+  waterTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0B2C5E',
+  },
+
+  waterMetaGrid: { marginBottom: 12, gap: 6 },
+  waterMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  waterLabel: { flex: 1, color: '#64748B', fontWeight: '800' },
+  waterMetaValue: { color: '#0B2C5E', fontWeight: '900', fontSize: 15 },
+
+  waterInputRow: { flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' },
+  waterBtnsCol: { flexDirection: 'row', gap: 8 },
+  waterInput: {
+    flex: 1,
+    minWidth: 120,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    color: '#0B2C5E',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  waterAddBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#1E90D6',
+  },
+  waterAddBtnText: { color: '#FFFFFF', fontWeight: '900', fontSize: 15 },
+  waterSubtractBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  waterSubtractBtnText: { color: '#0B2C5E', fontWeight: '900', fontSize: 15 },
+  waterResetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  waterResetBtnText: { color: '#64748B', fontWeight: '700', fontSize: 13 },
 
   modalBackdrop: {
     flex: 1,
