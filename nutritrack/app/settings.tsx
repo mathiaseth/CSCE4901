@@ -8,9 +8,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemeContext } from '../lib/theme';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { router } from 'expo-router';
+import { useProfile } from '../context/ProfileContext';
 
 export default function SettingsScreen() {
   const { mode, setMode, colors } = useContext(ThemeContext);
+  const { profile } = useProfile();
 
   const SectionHeader = ({ title }: { title: string }) => (
     <Text style={[styles.sectionHeader, { color: colors.subText }]}>
@@ -21,11 +26,14 @@ export default function SettingsScreen() {
   const Row = ({
     icon,
     label,
+    onPress,
   }: {
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
+    onPress?: () => void;
   }) => (
     <Pressable
+      onPress={onPress}
       style={[
         styles.row,
         { borderColor: colors.border, backgroundColor: colors.card },
@@ -62,15 +70,17 @@ export default function SettingsScreen() {
         <View style={styles.profileTopRow}>
           <View>
             <Text style={[styles.profileName, { color: colors.text }]}>
-              Mike
+              {profile.fullName ?? 'Your Name'}
             </Text>
-            <Text style={[styles.profileSub, { color: colors.subText }]}>
-              Member since January 28, 2026
-            </Text>
+            {profile.memberSince && (
+              <Text style={[styles.profileSub, { color: colors.subText }]}>
+                Member since {profile.memberSince}
+              </Text>
+            )}
           </View>
 
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>M</Text>
+            <Text style={styles.avatarText}>{profile.initials}</Text>
           </View>
         </View>
 
@@ -78,19 +88,19 @@ export default function SettingsScreen() {
           <StatBubble
             icon="trending-up-outline"
             label="Active streak"
-            value="1 day"
+            value={`${profile.activeStreak} day${profile.activeStreak !== 1 ? 's' : ''}`}
             colors={colors}
           />
           <StatBubble
             icon="time-outline"
             label="Longest streak"
-            value="1 day"
+            value={`${profile.longestStreak} day${profile.longestStreak !== 1 ? 's' : ''}`}
             colors={colors}
           />
           <StatBubble
             icon="calendar-outline"
             label="Total tracked"
-            value="1 day"
+            value={`${profile.totalTrackedDays} day${profile.totalTrackedDays !== 1 ? 's' : ''}`}
             colors={colors}
           />
         </View>
@@ -100,7 +110,8 @@ export default function SettingsScreen() {
       <SectionHeader title="ACCOUNT" />
 
       <View style={styles.group}>
-        <Row icon="person-outline" label="Account" />
+        <Row icon="person-outline" label="Account" onPress={() => router.push('/profile' as never)} />
+        <Row icon="trophy-outline" label="Goals & Progress" onPress={() => router.push('/goals' as never)} />
         <Row icon="people-outline" label="Friends" />
         <Row icon="restaurant-outline" label="Saved Foods, Meals & Recipes" />
         <Row icon="card-outline" label="Subscription" />
@@ -154,10 +165,21 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        <Row icon="scale-outline" label="Favorite Serving Units" />
         <Row icon="nutrition-outline" label="Nutrients" />
         <Row icon="extension-puzzle-outline" label="Integrations" />
       </View>
+
+      {/* Sign Out */}
+      <Pressable
+        style={[styles.logoutBtn, { borderColor: colors.border }]}
+        onPress={async () => {
+          await signOut(auth);
+          router.replace('/login');
+        }}
+      >
+        <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+        <Text style={styles.logoutText}>Sign Out</Text>
+      </Pressable>
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -306,5 +328,22 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
+  },
+
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 8,
+  },
+
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#EF4444',
   },
 });

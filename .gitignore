@@ -23,3 +23,7 @@ temp/
 # IDE/editor files
 .vscode/
 .idea/
+
+# Claude Code
+.claude/
+CLAUDE.md
