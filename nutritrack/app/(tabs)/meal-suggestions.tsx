@@ -81,10 +81,10 @@ function getTargetCaloriesForMeal(meal: MealKey, remaining: number) {
 }
 
 export default function MealSuggestionsScreen() {
-  const { consumedCalories } = useNutrition();
+  const { totalCalories } = useNutrition();
   const { colors } = useContext(ThemeContext);
 
-  const remaining = Math.max(CAL_GOAL - consumedCalories, 0);
+  const remaining = Math.max(CAL_GOAL - totalCalories, 0);
 
   const [mealType, setMealType] = useState<MealKey>('Breakfast');
   const [macroPreference, setMacroPreference] = useState<MacroPreference>('high-protein');

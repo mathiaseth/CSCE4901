@@ -5,7 +5,6 @@ import { useWater } from '../../context/WaterContext';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   StatusBar,
   ScrollView,
@@ -790,8 +789,6 @@ export default function DashboardScreen() {
   const {
     waterTodayMl,
     waterGoalMl,
-    addWater,
-    resetWaterToday,
     waterFromTrackerMl,
   } = useWater();
 
@@ -799,7 +796,6 @@ export default function DashboardScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile: userProfile } = useProfile();
 
-  const [waterInputMl, setWaterInputMl] = useState('');
   const [caloriesBurned] = useState<number>(0);
   const [stepsToday] = useState<number>(0);
   const [workouts] = useState<number>(0);
@@ -1110,44 +1106,6 @@ export default function DashboardScreen() {
                 <Text style={styles.breakValue}>{waterFromTrackerMl} ml</Text>
               </View>
             )}
-            <View style={styles.waterInputRow}>
-              <TextInput
-                style={styles.waterInput}
-                placeholder="Amount (ml)"
-                placeholderTextColor={colors.subText}
-                value={waterInputMl}
-                onChangeText={setWaterInputMl}
-                keyboardType="number-pad"
-              />
-              <Pressable
-                style={styles.waterAddBtn}
-                onPress={() => {
-                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
-                  if (!Number.isNaN(ml) && ml > 0) {
-                    addWater(ml);
-                    setWaterInputMl('');
-                  }
-                }}
-              >
-                <Text style={styles.waterAddBtnText}>Add</Text>
-              </Pressable>
-              <Pressable
-                style={styles.waterSubtractBtn}
-                onPress={() => {
-                  const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
-                  if (!Number.isNaN(ml) && ml > 0) {
-                    addWater(-ml);
-                    setWaterInputMl('');
-                  }
-                }}
-              >
-                <Text style={styles.waterSubtractBtnText}>Subtract</Text>
-              </Pressable>
-            </View>
-            <Pressable style={styles.waterResetBtn} onPress={resetWaterToday}>
-              <Ionicons name="refresh-outline" size={16} color={colors.subText} />
-              <Text style={styles.waterResetBtnText}>Reset today</Text>
-            </Pressable>
           </View>
         </View>
 

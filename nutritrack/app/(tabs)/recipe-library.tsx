@@ -57,9 +57,9 @@ function MacroSummary({ recipe }: { recipe: Recipe }) {
 
 export default function RecipeLibraryScreen() {
   const { colors } = useContext(ThemeContext);
-  const { consumedCalories } = useNutrition();
+  const { totalCalories } = useNutrition();
 
-  const remaining = Math.max(CAL_GOAL - consumedCalories, 0);
+  const remaining = Math.max(CAL_GOAL - totalCalories, 0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDietTags, setSelectedDietTags] = useState<DietaryTag[]>([]);

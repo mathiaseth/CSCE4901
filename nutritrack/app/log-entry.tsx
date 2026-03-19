@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useNutrition, MealKey, LoggedFood } from '../context/NutritionContext';
 import { useAppTheme } from '../lib/theme';
+import { useLocalSearchParams } from 'expo-router';
+import { useWater } from '../context/WaterContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -417,6 +419,52 @@ function makeStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     mealCal: { fontWeight: '800', color: colors.primary, fontSize: 14 },
 
     emptyMeal: { color: '#CBD5E1', fontSize: 13, fontWeight: '600', paddingVertical: 4 },
+
+    // ── Water log card (matches meal card format) ─────────────────────────
+    waterLogInputRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 8,
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    },
+    waterLogInput: {
+      flex: 1,
+      minWidth: 140,
+      height: 44,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      paddingHorizontal: 14,
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 15,
+    },
+    waterLogAddBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+    },
+    waterLogAddBtnText: { color: '#FFFFFF', fontWeight: '900', fontSize: 15 },
+    waterLogSubtractBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    waterLogSubtractBtnText: { color: colors.text, fontWeight: '900', fontSize: 15 },
+    waterLogResetBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 10,
+      justifyContent: 'center',
+    },
+    waterLogResetBtnText: { color: colors.subText, fontWeight: '700', fontSize: 13 },
 
     foodRow: {
       flexDirection: 'row',
@@ -917,6 +965,78 @@ export default function LogEntryScreen() {
   // ── View mode ──────────────────────────────────────────────────────────────
   type ViewMode = 'log' | 'myMeals';
   const [viewMode, setViewMode] = useState<ViewMode>('log');
+
+  // ── Prefill support (from Meal Suggestions / Recipe Library) ─────────────
+  const params = useLocalSearchParams<{
+    meal?: string;
+    foods?: string; // JSON-serialized array
+  }>();
+  const didPrefillRef = useRef(false);
+
+  // ── Water log state + actions ─────────────────────────────────────────────
+  const { addWater, resetWaterToday } = useWater();
+  const [waterInputMl, setWaterInputMl] = useState('');
+
+  useEffect(() => {
+    if (didPrefillRef.current) return;
+
+    const mealParam = typeof params.meal === 'string' ? params.meal : undefined;
+    const foodsParam = typeof params.foods === 'string' ? params.foods : undefined;
+    if (!mealParam || !foodsParam) return;
+
+    const mealKey = MEALS.includes(mealParam as MealKey) ? (mealParam as MealKey) : null;
+    if (!mealKey) return;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(foodsParam);
+    } catch {
+      return;
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+    type PrefillFood = {
+      id?: string;
+      name: string;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+
+    didPrefillRef.current = true;
+    setViewMode('log');
+
+    parsed.forEach((f, idx) => {
+      const item = f as Partial<PrefillFood>;
+      if (typeof item?.name !== 'string') return;
+
+      const calories = Number(item.calories);
+      const protein = Number(item.protein);
+      const carbs = Number(item.carbs);
+      const fat = Number(item.fat);
+      if (![calories, protein, carbs, fat].every((n) => Number.isFinite(n))) return;
+
+      const logId = `${mealKey}-prefill-${item.id ?? item.name}-${idx}-${Date.now()}`;
+      const entry: LoggedFood = {
+        logId,
+        name: item.name,
+        caloriesPer100: calories,
+        proteinPer100: protein,
+        carbsPer100: carbs,
+        fatPer100: fat,
+        servingSize: 100,
+        numServings: 1,
+        calories,
+        protein,
+        carbs,
+        fat,
+      };
+
+      addFood(mealKey, entry);
+    });
+  }, [params, addFood]);
 
   // ── Search state ───────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -1582,6 +1702,61 @@ export default function LogEntryScreen() {
               </View>
             );
           })}
+
+          {/* Water Log (moved here from dashboard) */}
+          <View style={[styles.mealCard, { marginBottom: 20 }]}>
+            <View style={styles.mealHeader}>
+              <View style={styles.mealTitleRow}>
+                <Ionicons name="water-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+                <Text style={styles.mealTitle}>Water Log</Text>
+              </View>
+              <View style={{ flex: 1 }} />
+            </View>
+
+            <View style={styles.waterLogInputRow}>
+              <TextInput
+                style={styles.waterLogInput}
+                placeholder="Amount (ml)"
+                placeholderTextColor={colors.subText}
+                value={waterInputMl}
+                onChangeText={setWaterInputMl}
+                keyboardType="number-pad"
+              />
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable
+                  style={styles.waterLogAddBtn}
+                  onPress={() => {
+                    const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                    if (!Number.isNaN(ml) && ml > 0) {
+                      addWater(ml);
+                      setWaterInputMl('');
+                    }
+                  }}
+                >
+                  <Text style={styles.waterLogAddBtnText}>Add</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.waterLogSubtractBtn}
+                  onPress={() => {
+                    const ml = parseInt(waterInputMl.replace(/\D/g, ''), 10);
+                    if (!Number.isNaN(ml) && ml > 0) {
+                      addWater(-ml);
+                      setWaterInputMl('');
+                    }
+                  }}
+                >
+                  <Text style={styles.waterLogSubtractBtnText}>Subtract</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable style={styles.waterLogResetBtn} onPress={resetWaterToday}>
+              <Ionicons name="refresh-outline" size={16} color={colors.subText} />
+              <Text style={styles.waterLogResetBtnText}>Reset today</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       )}
 
