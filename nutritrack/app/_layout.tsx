@@ -32,9 +32,10 @@ import {
   type AppThemeMode,
 } from '../lib/theme';
 
-// Nutrition & Water contexts
+// Nutrition, Water & Profile contexts
 import { NutritionProvider } from '../context/NutritionContext';
 import { WaterProvider } from '../context/WaterContext';
+import { ProfileProvider } from '../context/ProfileContext';
 import { scheduleWaterReminders } from '../lib/waterReminders';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -103,12 +104,14 @@ export default function RootLayout() {
     const inSetup = seg0 === 'setup';
     const isLogin = seg0 === 'login';
 
-    const isProfile = seg0 === 'profile';
-    const isSettings = seg0 === 'settings';
-    const isLogEntry = seg0 === 'log-entry';
+    const isProfile       = seg0 === 'profile';
+    const isSettings      = seg0 === 'settings';
+    const isLogEntry      = seg0 === 'log-entry';
+    const isNotifications = seg0 === 'notifications';
+    const isGoals         = seg0 === 'goals';
 
     if (userIsLoggedIn) {
-      if (!inTabs && !isProfile && !isSettings && !isLogEntry) {
+      if (!inTabs && !isProfile && !isSettings && !isLogEntry && !isNotifications && !isGoals) {
         router.replace('/(tabs)/dashboard');
       }
       return;
@@ -184,6 +187,7 @@ export default function RootLayout() {
   return appReady ? (
     <NutritionProvider>
       <WaterProvider>
+      <ProfileProvider>
         <ThemeContext.Provider
           value={{ mode: themeMode, colors, setMode: updateThemeMode }}
         >
@@ -223,6 +227,7 @@ export default function RootLayout() {
           )}
         </View>
         </ThemeContext.Provider>
+      </ProfileProvider>
       </WaterProvider>
     </NutritionProvider>
   ) : null;
