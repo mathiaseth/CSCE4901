@@ -1,6 +1,6 @@
 // app/_layout.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -118,6 +118,30 @@ export default function RootLayout() {
 
     router.replace('/(onboarding)');
   }, [appReady, userIsLoggedIn, segments, router]);
+
+  // Web-only function key shortcuts:
+  // - F5 => Meal Suggestions
+  // - F13 => Recipe Library
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (!appReady || !userIsLoggedIn) return;
+
+      if (e.key === 'F5') {
+        e.preventDefault();
+        router.push('/(tabs)/meal-suggestions');
+      }
+
+      if (e.key === 'F13') {
+        e.preventDefault();
+        router.push('/(tabs)/recipe-library');
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [appReady, userIsLoggedIn, router]);
 
   // Motivation popup logic
   useEffect(() => {
