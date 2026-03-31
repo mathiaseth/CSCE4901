@@ -1,5 +1,5 @@
 // app/(tabs)/dashboard.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNutrition } from '../../context/NutritionContext';
 import { useWater } from '../../context/WaterContext';
 import {
@@ -19,6 +19,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { Pedometer } from 'expo-sensors';
 import { useAppTheme } from '../../lib/theme';
 import { LightColors } from '../../lib/theme';
 import { router } from 'expo-router';
@@ -837,7 +838,9 @@ export default function DashboardScreen() {
   const { allItems, badgeCount } = useActivityFeed();
 
   const [caloriesBurned] = useState<number>(0);
-  const stepsToday = getStepsToday();
+  const [stepsToday, setStepsToday] = useState<number>(getStepsToday());
+  const [pedometerAvailable, setPedometerAvailable] = useState<boolean | null>(null);
+  const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const workouts = WORKOUTS_THIS_WEEK;
 
   const [weekWeights] = useState<WeekWeight[]>([
@@ -965,6 +968,47 @@ export default function DashboardScreen() {
   const animatedWaterProps = useAnimatedProps(() => ({
     strokeDashoffset: waterOffsetShared.value,
   }));
+
+  // Live device pedometer
+  useEffect(() => {
+    let mounted = true;
+
+    const startPedometer = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        if (!mounted) return;
+
+        setPedometerAvailable(available);
+
+        if (!available) return;
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const now = new Date();
+        const result = await Pedometer.getStepCountAsync(startOfDay, now);
+
+        if (!mounted) return;
+        setStepsToday(result.steps ?? 0);
+
+        stepsSubscriptionRef.current = Pedometer.watchStepCount((result) => {
+          if (!mounted) return;
+          setStepsToday((prev) => prev + result.steps);
+        });
+      } catch (error) {
+        if (!mounted) return;
+        setPedometerAvailable(false);
+      }
+    };
+
+    startPedometer();
+
+    return () => {
+      mounted = false;
+      stepsSubscriptionRef.current?.remove();
+      stepsSubscriptionRef.current = null;
+    };
+  }, []);
 
   const todayLabel = formatDateLong(new Date());
 
@@ -1232,6 +1276,9 @@ export default function DashboardScreen() {
 
             <Text style={styles.bigMetric}>{stepsToday.toLocaleString()}</Text>
             <Text style={styles.mutedMetric}>Today</Text>
+            {pedometerAvailable === false && (
+              <Text style={styles.mutedMetric}>Step tracking works on a physical phone in Expo Go.</Text>
+            )}
           </Pressable>
 
           {/* Workouts */}
@@ -1367,6 +1414,12 @@ export default function DashboardScreen() {
                 <Text style={styles.statValue}>{stepsTotal.toLocaleString()}</Text>
               </View>
             </View>
+
+            {pedometerAvailable === false && (
+              <Text style={[styles.mutedMetric, { marginBottom: 12 }]}>
+                Step tracking works on a physical phone in Expo Go.
+              </Text>
+            )}
 
             <RangeTabs value={stepsRange} onChange={setStepsRange} colors={colors} />
 
