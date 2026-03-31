@@ -37,6 +37,8 @@ import { NutritionProvider } from '../context/NutritionContext';
 import { WaterProvider } from '../context/WaterContext';
 import { ProfileProvider } from '../context/ProfileContext';
 import { scheduleWaterReminders } from '../lib/waterReminders';
+import { SocialMetricsSync } from '../components/SocialMetricsSync';
+import { AuthFirestoreBootstrap } from '../components/AuthFirestoreBootstrap';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -108,10 +110,17 @@ export default function RootLayout() {
     const isSettings      = seg0 === 'settings';
     const isLogEntry      = seg0 === 'log-entry';
     const isNotifications = seg0 === 'notifications';
-    const isGoals         = seg0 === 'goals';
+    const isGoals = seg0 === 'goals';
 
     if (userIsLoggedIn) {
-      if (!inTabs && !isProfile && !isSettings && !isLogEntry && !isNotifications && !isGoals) {
+      if (
+        !inTabs &&
+        !isProfile &&
+        !isSettings &&
+        !isLogEntry &&
+        !isNotifications &&
+        !isGoals
+      ) {
         router.replace('/(tabs)/dashboard');
       }
       return;
@@ -192,6 +201,8 @@ export default function RootLayout() {
           value={{ mode: themeMode, colors, setMode: updateThemeMode }}
         >
         <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <AuthFirestoreBootstrap />
+          <SocialMetricsSync />
           <Slot />
 
           {motivationVisible && (

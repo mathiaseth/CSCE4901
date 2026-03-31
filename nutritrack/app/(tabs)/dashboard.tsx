@@ -23,6 +23,8 @@ import { useAppTheme } from '../../lib/theme';
 import { LightColors } from '../../lib/theme';
 import { router } from 'expo-router';
 import { useProfile } from '../../context/ProfileContext';
+import { STEPS_WEEK_SERIES, getStepsToday, WORKOUTS_THIS_WEEK } from '../../lib/dashboardMetrics';
+import { useActivityFeed } from '../../hooks/useActivityFeed';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -194,6 +196,43 @@ function makeStyles(c: typeof LightColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    notifWrap: { position: 'relative' as const },
+    notifBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    notifBadgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+    activityCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.card,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 16,
+    },
+    activityHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    activityTitle: { fontSize: 16, fontWeight: '900' },
+    activitySeeAll: { fontSize: 13, fontWeight: '800' },
+    activityItem: {
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    activityItemTitle: { fontSize: 14, fontWeight: '800' },
+    activityItemSub: { fontSize: 12, fontWeight: '600', marginTop: 2 },
 
     todayRow: {
       flexDirection: 'row',
@@ -795,10 +834,11 @@ export default function DashboardScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { profile: userProfile } = useProfile();
+  const { allItems, badgeCount } = useActivityFeed();
 
   const [caloriesBurned] = useState<number>(0);
-  const [stepsToday] = useState<number>(0);
-  const [workouts] = useState<number>(0);
+  const stepsToday = getStepsToday();
+  const workouts = WORKOUTS_THIS_WEEK;
 
   const [weekWeights] = useState<WeekWeight[]>([
     { day: 'Mon', value: 0 },
@@ -871,7 +911,7 @@ export default function DashboardScreen() {
   };
 
   const stepsHistoryByRange: Record<RangeKey, number[]> = {
-    '1W': [1200, 3200, 4500, 2100, 7800, 6400, 5200],
+    '1W': [...STEPS_WEEK_SERIES],
     '1M': [2200, 3100, 4800, 5300, 6100, 7200, 6800, 4000, 5200, 7600],
     '2M': [1800, 2400, 3300, 5100, 6000, 7000, 6600, 5400, 4200, 3900, 5800],
     '3M': [1500, 2200, 3100, 4600, 5900, 7100, 6800, 6400, 5100, 4300, 3900],
@@ -951,10 +991,46 @@ export default function DashboardScreen() {
 
           <Text style={styles.brand}>NUTRIFIT</Text>
 
-          <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.push('/notifications' as never)}>
-            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+          <Pressable
+            style={styles.iconBtn}
+            hitSlop={10}
+            onPress={() => router.push('/notifications' as never)}
+          >
+            <View style={styles.notifWrap}>
+              <Ionicons name="notifications-outline" size={20} color={colors.text} />
+              {badgeCount > 0 ? (
+                <View style={[styles.notifBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.notifBadgeText}>
+                    {badgeCount > 9 ? '9+' : String(badgeCount)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </Pressable>
         </View>
+
+        {allItems.length > 0 ? (
+          <View style={[styles.activityCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <View style={styles.activityHeader}>
+              <Text style={[styles.activityTitle, { color: colors.text }]}>Updates</Text>
+              <Pressable onPress={() => router.push('/notifications' as never)} hitSlop={8}>
+                <Text style={[styles.activitySeeAll, { color: colors.primary }]}>See all</Text>
+              </Pressable>
+            </View>
+            {allItems.slice(0, 4).map((item, idx, arr) => (
+              <Pressable
+                key={`${item.kind}-${item.id}-${idx}`}
+                onPress={() => router.push('/notifications' as never)}
+                style={[styles.activityItem, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
+              >
+                <Text style={[styles.activityItemTitle, { color: colors.text }]}>{item.title}</Text>
+                <Text style={[styles.activityItemSub, { color: colors.subText }]} numberOfLines={2}>
+                  {item.subtitle}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         {/* Today */}
         <View style={styles.todayRow}>
