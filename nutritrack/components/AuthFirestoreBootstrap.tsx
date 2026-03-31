@@ -15,7 +15,11 @@ export function AuthFirestoreBootstrap() {
         uid: u.uid,
         email: u.email,
         displayName: '',
-      }).catch(() => {});
+      }).catch((e) => {
+        if (__DEV__) {
+          console.warn('[AuthFirestoreBootstrap] users/{uid} write failed:', e);
+        }
+      });
     });
     return unsub;
   }, []);
