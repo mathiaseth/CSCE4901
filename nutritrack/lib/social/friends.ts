@@ -157,7 +157,10 @@ export function subscribeIncomingFriendRequests(
       }));
       onChange(rows);
     },
-    () => onChange([])
+    (err) => {
+      if (__DEV__) console.warn('[friendRequests incoming]', err);
+      onChange([]);
+    }
   );
 }
 
@@ -179,7 +182,10 @@ export function subscribeOutgoingFriendRequests(
       }));
       onChange(rows);
     },
-    () => onChange([])
+    (err) => {
+      if (__DEV__) console.warn('[friendRequests outgoing]', err);
+      onChange([]);
+    }
   );
 }
 
