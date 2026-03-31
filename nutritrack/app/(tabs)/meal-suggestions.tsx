@@ -159,7 +159,7 @@ export default function MealSuggestionsScreen() {
 
   const [mealType, setMealType] = useState<MealKey>('Breakfast');
   const [macroPreference, setMacroPreference] = useState<MacroPreference>(
-    goalToMacroPref(profile.goal)
+    goalToMacroPref(profile.goal ?? undefined)
   );
   const [selectedDietTags, setSelectedDietTags] = useState<DietaryTag[]>([]);
   const [refreshSeed, setRefreshSeed] = useState(0);
@@ -170,7 +170,7 @@ export default function MealSuggestionsScreen() {
 
   // Sync macro pref when goal loads
   useEffect(() => {
-    setMacroPreference(goalToMacroPref(profile.goal));
+    setMacroPreference(goalToMacroPref(profile.goal ?? undefined));
   }, [profile.goal]);
 
   // Load usage count from storage
