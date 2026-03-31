@@ -442,12 +442,6 @@ export default function FriendsScreen() {
               ) : null}
             </View>
 
-            <Text style={[s.lead, { color: colors.subText }]}>
-              Add someone by the exact email they use to sign in to NutriFit. When they accept, their
-              synced stats appear here. If search fails, ask them to open the app once while logged in
-              so their profile syncs to Firestore.
-            </Text>
-
             <View style={[s.addCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[s.addLabel, { color: colors.text }]}>Add friend by email</Text>
               <TextInput
