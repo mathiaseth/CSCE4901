@@ -2,7 +2,11 @@ export type DietaryTag =
   | 'vegetarian'
   | 'vegan'
   | 'dairy-free'
-  | 'gluten-free';
+  | 'gluten-free'
+  | 'halal'
+  | 'nut-free'
+  | 'keto'
+  | 'paleo';
 
 export type MacroTotals = {
   calories: number;

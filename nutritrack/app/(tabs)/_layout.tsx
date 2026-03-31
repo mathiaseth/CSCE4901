@@ -29,21 +29,16 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="meal-suggestions"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
         name="log-entry"
         options={{
           title: 'Log',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="create-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="meal-suggestions"
-        options={{
-          title: 'Suggestions',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flame-outline" size={size} color={color} />
           ),
         }}
       />
