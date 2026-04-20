@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { syncOnboardingStorageToCurrentUserProfile } from '@/lib/accountProfile';
 
 export default function CreateAccountScreen() {
   const [email, setEmail] = useState('');
@@ -69,6 +70,7 @@ export default function CreateAccountScreen() {
 
       // Optional: store email for display later
       await AsyncStorage.setItem('onboard.email', cleanEmail);
+      await syncOnboardingStorageToCurrentUserProfile();
 
       // Go to dashboard after account creation
       router.replace('/(tabs)/dashboard');

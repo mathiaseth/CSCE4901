@@ -12,6 +12,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Private account data used to keep onboarding/profile state consistent across devices.
+    match /userProfiles/{userId} {
+      allow read, create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
     // `resource` is null when a document does not exist. Rules must allow that case so
     // clients can getDoc() missing friendRequests/friendships without permission errors.
     match /friendRequests/{requestId} {

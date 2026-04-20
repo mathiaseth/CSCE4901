@@ -841,6 +841,7 @@ export default function DashboardScreen() {
   const [stepsToday, setStepsToday] = useState<number>(getStepsToday());
   const [pedometerAvailable, setPedometerAvailable] = useState<boolean | null>(null);
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const stepsBaselineRef = useRef<number>(0);
   const workouts = WORKOUTS_THIS_WEEK;
 
   const [weekWeights] = useState<WeekWeight[]>([
@@ -914,7 +915,7 @@ export default function DashboardScreen() {
   };
 
   const stepsHistoryByRange: Record<RangeKey, number[]> = {
-    '1W': [...STEPS_WEEK_SERIES],
+    '1W': [...STEPS_WEEK_SERIES.slice(0, -1), stepsToday],
     '1M': [2200, 3100, 4800, 5300, 6100, 7200, 6800, 4000, 5200, 7600],
     '2M': [1800, 2400, 3300, 5100, 6000, 7000, 6600, 5400, 4200, 3900, 5800],
     '3M': [1500, 2200, 3100, 4600, 5900, 7100, 6800, 6400, 5100, 4300, 3900],
@@ -989,11 +990,14 @@ export default function DashboardScreen() {
         const result = await Pedometer.getStepCountAsync(startOfDay, now);
 
         if (!mounted) return;
-        setStepsToday(result.steps ?? 0);
+        const initialSteps = result.steps ?? 0;
+        stepsBaselineRef.current = initialSteps;
+        setStepsToday(initialSteps);
 
         stepsSubscriptionRef.current = Pedometer.watchStepCount((result) => {
           if (!mounted) return;
-          setStepsToday((prev) => prev + result.steps);
+          // expo-sensors returns steps since watch start, so add to baseline instead of cumulative + prev
+          setStepsToday(stepsBaselineRef.current + (result.steps ?? 0));
         });
       } catch (error) {
         if (!mounted) return;

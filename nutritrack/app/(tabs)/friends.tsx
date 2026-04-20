@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Pedometer } from 'expo-sensors';
 import type { ComponentProps } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -21,7 +22,6 @@ import { useProfile } from '../../context/ProfileContext';
 import { useNutrition } from '../../context/NutritionContext';
 import { useWater } from '../../context/WaterContext';
 import {
-  getStepsToday,
   getWorkoutsToday,
   WORKOUTS_THIS_WEEK,
 } from '../../lib/dashboardMetrics';
@@ -142,6 +142,7 @@ export default function FriendsScreen() {
   const { waterTodayMl, waterGoalMl, waterFromTrackerMl } = useWater();
 
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
+  const [stepsToday, setStepsToday] = useState<number>(0);
   const [friendUids, setFriendUids] = useState<string[]>([]);
   const [incoming, setIncoming] = useState<{ id: string; fromUid: string }[]>([]);
   const [outgoing, setOutgoing] = useState<{ id: string; toUid: string }[]>([]);
@@ -150,18 +151,58 @@ export default function FriendsScreen() {
   const [period, setPeriod] = useState<PeriodKey>('daily');
   const [addEmail, setAddEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const stepSubRef = useRef<{ remove: () => void } | null>(null);
+  const stepBaselineRef = useRef<number>(0);
 
   const weekTotals = useWeeklyStats(
     loggedMealsCount,
     totalCalories,
     waterTodayMl,
     waterGoalMl,
-    waterFromTrackerMl
+    waterFromTrackerMl,
+    stepsToday
   );
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const startPedometer = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        if (!mounted || !available) return;
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const now = new Date();
+        const initial = await Pedometer.getStepCountAsync(startOfDay, now);
+        if (!mounted) return;
+
+        const initialSteps = initial.steps ?? 0;
+        stepBaselineRef.current = initialSteps;
+        setStepsToday(initialSteps);
+
+        stepSubRef.current = Pedometer.watchStepCount((result) => {
+          if (!mounted) return;
+          setStepsToday(stepBaselineRef.current + (result.steps ?? 0));
+        });
+      } catch {
+        // Keep fallback value when pedometer is unavailable.
+      }
+    };
+
+    startPedometer();
+
+    return () => {
+      mounted = false;
+      stepSubRef.current?.remove();
+      stepSubRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -216,8 +257,6 @@ export default function FriendsScreen() {
   const waterTotalMl = waterTodayMl + waterFromTrackerMl;
   const hydrationYou =
     waterGoalMl > 0 ? Math.min(100, Math.round((waterTotalMl / waterGoalMl) * 100)) : 0;
-  const stepsToday = getStepsToday();
-
   const youRow: LeaderRow = useMemo(() => {
     if (period === 'daily') {
       return {

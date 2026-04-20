@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import {
+  loadAccountProfileForCurrentUser,
+  readOnboardingDataFromStorage,
+  saveAccountProfileForCurrentUser,
+} from '../lib/accountProfile';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,30 +100,26 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const load = useCallback(async () => {
     try {
-      const [
-        namePair, genderPair, dobPair, unitsPair,
-        hFtPair, hInPair, hCmPair, wLbsPair, wKgPair,
-        goalPair, activityPair, wGoalLbsPair, wGoalKgPair,
-      ] = await AsyncStorage.multiGet([
-        'onboard.fullName', 'onboard.gender', 'onboard.dob', 'onboard.units',
-        'onboard.heightFt', 'onboard.heightIn', 'onboard.heightCm',
-        'onboard.weightLbs', 'onboard.weightKg',
-        'onboard.goal', 'onboard.activity',
-        'onboard.weightGoalLbs', 'onboard.weightGoalKg',
-      ]);
+      const cloudData = await loadAccountProfileForCurrentUser({ syncToStorage: true });
+      const storageData = await readOnboardingDataFromStorage();
+      const source = cloudData ?? storageData;
 
-      const name     = namePair[1] ?? null;
-      const gender   = genderPair[1] ?? null;
-      const dobRaw   = dobPair[1] ?? null;
-      const units    = (unitsPair[1] ?? null) as ProfileUnits;
+      if (!cloudData && auth.currentUser && Object.keys(storageData).length > 0) {
+        await saveAccountProfileForCurrentUser(storageData);
+      }
 
-      const hFt       = hFtPair[1]      ? parseInt(hFtPair[1],   10) : null;
-      const hIn       = hInPair[1]      ? parseInt(hInPair[1],   10) : null;
-      const hCm       = hCmPair[1]      ? parseFloat(hCmPair[1])    : null;
-      const wLbs      = wLbsPair[1]     ? parseFloat(wLbsPair[1])   : null;
-      const wKg       = wKgPair[1]      ? parseFloat(wKgPair[1])    : null;
-      const wGoalLbs  = wGoalLbsPair[1] ? parseFloat(wGoalLbsPair[1]) : null;
-      const wGoalKg   = wGoalKgPair[1]  ? parseFloat(wGoalKgPair[1])  : null;
+      const name = source.fullName ?? null;
+      const gender = source.gender ?? null;
+      const dobRaw = source.dob ?? null;
+      const units = (source.units ?? null) as ProfileUnits;
+
+      const hFt = source.heightFt ? parseInt(source.heightFt, 10) : null;
+      const hIn = source.heightIn ? parseInt(source.heightIn, 10) : null;
+      const hCm = source.heightCm ? parseFloat(source.heightCm) : null;
+      const wLbs = source.weightLbs ? parseFloat(source.weightLbs) : null;
+      const wKg = source.weightKg ? parseFloat(source.weightKg) : null;
+      const wGoalLbs = source.weightGoalLbs ? parseFloat(source.weightGoalLbs) : null;
+      const wGoalKg = source.weightGoalKg ? parseFloat(source.weightGoalKg) : null;
 
       // Format height/weight/weightGoal based on stored units
       let heightText: string | null = null;
@@ -156,8 +156,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         weightKg: wKg && wKg > 0 ? wKg : null,
         weightLbs: wLbs && wLbs > 0 ? wLbs : null,
         heightCm: hCm && hCm > 0 ? hCm : null,
-        goal:          goalPair[1]     ?? null,
-        activityLevel: activityPair[1] ?? null,
+        goal: source.goal ?? null,
+        activityLevel: source.activity ?? null,
         weightGoalKg:   wGoalKg  && wGoalKg  > 0 ? wGoalKg  : null,
         weightGoalLbs:  wGoalLbs && wGoalLbs > 0 ? wGoalLbs : null,
         weightGoalText,
