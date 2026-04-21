@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 // Firebase
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { loadProfileFromFirestore } from '../lib/firestoreSync';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -68,10 +69,11 @@ export default function LoginScreen() {
       setLoading(true);
 
       const cleanEmail = email.trim().toLowerCase();
-      await signInWithEmailAndPassword(auth, cleanEmail, password);
+      const { user } = await signInWithEmailAndPassword(auth, cleanEmail, password);
 
-      // Auth guard in app/_layout.tsx will route  to /(tabs)/dashboard automatically.
-      // But we can still force it here for instant navigation:
+      // Pull cloud profile into AsyncStorage so data is ready before navigating
+      await loadProfileFromFirestore(user.uid).catch(() => {});
+
       router.replace('/(tabs)/dashboard');
     } catch (err: any) {
       const code = err?.code as string | undefined;

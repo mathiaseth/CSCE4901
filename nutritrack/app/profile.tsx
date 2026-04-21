@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { saveProfileToFirestore } from '../lib/firestoreSync';
 import { useAppTheme } from '../lib/theme';
 import { useProfile } from '../context/ProfileContext';
 
@@ -169,7 +170,13 @@ export default function ProfileScreen() {
     profile.units === 'imperial' ? 'Imperial (ft / lbs)' :
     profile.units === 'metric'   ? 'Metric (cm / kg)'    : '—';
 
-  const handleSaved = () => { setEditSection(null); loadProfile(); reloadGlobal(); };
+  const handleSaved = () => {
+    setEditSection(null);
+    loadProfile();
+    reloadGlobal();
+    const uid = auth.currentUser?.uid;
+    if (uid) saveProfileToFirestore(uid).catch(() => {});
+  };
 
   return (
     <View style={[s.screen, { backgroundColor: colors.background }]}>

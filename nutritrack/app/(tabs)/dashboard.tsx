@@ -24,7 +24,7 @@ import { useAppTheme } from '../../lib/theme';
 import { LightColors } from '../../lib/theme';
 import { router } from 'expo-router';
 import { useProfile } from '../../context/ProfileContext';
-import { STEPS_WEEK_SERIES, getStepsToday, WORKOUTS_THIS_WEEK } from '../../lib/dashboardMetrics';
+import { STEPS_WEEK_SERIES, getStepsToday } from '../../lib/dashboardMetrics';
 import { useActivityFeed } from '../../hooks/useActivityFeed';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -38,7 +38,9 @@ function formatDateLong(d: Date) {
 }
 
 type WeekWeight = { day: string; value: number };
-type RangeKey = '1W' | '1M' | '2M' | '3M' | '6M' | '1Y';
+type WeightRangeKey = '1W' | '1M' | '2M' | '3M' | '6M' | '1Y';
+type StepsRangeKey = '1D' | '1W' | '1M';
+type RangeKey = WeightRangeKey | StepsRangeKey;
 
 function sum(arr: number[]) {
   return arr.reduce((a, b) => a + b, 0);
@@ -66,7 +68,9 @@ function buildXLabels(range: RangeKey, points: number) {
   const labels: string[] = [];
 
   const totalDays =
-    range === '1W'
+    range === '1D'
+      ? 0
+      : range === '1W'
       ? 6
       : range === '1M'
       ? 29
@@ -732,43 +736,57 @@ function SimpleLineChart({
         )}
 
         {/* X labels */}
-        {[
-          { idx: startIdx, anchor: 'start' as const },
-          { idx: midIdx, anchor: 'middle' as const },
-          { idx: endIdx, anchor: 'end' as const },
-        ].map(({ idx, anchor }) => {
-          const x = points[idx]?.x ?? padL;
-          const y = padT + chartH + 18;
-          const label = pickLabel(idx);
-          return (
-            <SvgText
-              key={`x-${idx}`}
-              x={x}
-              y={y}
-              fontSize="10"
-              fill={colors.subText}
-              textAnchor={anchor}
-            >
-              {label}
-            </SvgText>
-          );
-        })}
+        {safe.length === 1 ? (
+          <SvgText
+            key="x-only"
+            x={padL + chartW / 2}
+            y={padT + chartH + 18}
+            fontSize="10"
+            fill={colors.subText}
+            textAnchor="middle"
+          >
+            {pickLabel(0)}
+          </SvgText>
+        ) : (
+          [
+            { idx: startIdx, anchor: 'start' as const },
+            { idx: midIdx, anchor: 'middle' as const },
+            { idx: endIdx, anchor: 'end' as const },
+          ].map(({ idx, anchor }) => {
+            const x = points[idx]?.x ?? padL;
+            const y = padT + chartH + 18;
+            const label = pickLabel(idx);
+            return (
+              <SvgText
+                key={`x-${idx}`}
+                x={x}
+                y={y}
+                fontSize="10"
+                fill={colors.subText}
+                textAnchor={anchor}
+              >
+                {label}
+              </SvgText>
+            );
+          })
+        )}
       </Svg>
     </View>
   );
 }
 
-function RangeTabs({
+function RangeTabs<T extends RangeKey>({
   value,
   onChange,
   colors,
+  items = ['1W', '1M', '2M', '3M', '6M', '1Y'] as T[],
 }: {
-  value: RangeKey;
-  onChange: (k: RangeKey) => void;
+  value: T;
+  onChange: (k: T) => void;
   colors: typeof LightColors;
+  items?: T[];
 }) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const items: RangeKey[] = ['1W', '1M', '2M', '3M', '6M', '1Y'];
   return (
     <View style={styles.rangeTabs}>
       {items.map((k) => {
@@ -841,8 +859,6 @@ export default function DashboardScreen() {
   const [stepsToday, setStepsToday] = useState<number>(getStepsToday());
   const [pedometerAvailable, setPedometerAvailable] = useState<boolean | null>(null);
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
-  const workouts = WORKOUTS_THIS_WEEK;
-
   const [weekWeights] = useState<WeekWeight[]>([
     { day: 'Mon', value: 0 },
     { day: 'Tue', value: 0 },
@@ -859,8 +875,8 @@ export default function DashboardScreen() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
 
-  const [weightRange, setWeightRange] = useState<RangeKey>('1W');
-  const [stepsRange, setStepsRange] = useState<RangeKey>('1W');
+  const [weightRange, setWeightRange] = useState<WeightRangeKey>('1W');
+  const [stepsRange, setStepsRange] = useState<StepsRangeKey>('1D');
 
   // ─── Calendar state ─────────────────────────────────────────────────────────
   const today = new Date();
@@ -904,7 +920,7 @@ export default function DashboardScreen() {
   const startWeightSelected = 240;
   const foodLoggingStreak = userProfile.activeStreak;
 
-  const weightHistoryByRange: Record<RangeKey, number[]> = {
+  const weightHistoryByRange: Record<WeightRangeKey, number[]> = {
     '1W': [240, 239.6, 239.2, 239.0, 238.7, 238.9, 238.4],
     '1M': [240, 239.2, 238.8, 238.1, 237.6, 237.0, 236.6, 236.2, 235.9, 235.6],
     '2M': [240, 239.0, 238.0, 237.5, 236.8, 236.0, 235.5, 235.0, 234.6, 234.2, 233.9],
@@ -913,13 +929,10 @@ export default function DashboardScreen() {
     '1Y': [240, 238.0, 236.2, 234.7, 233.2, 232.0, 230.8, 229.9, 229.1, 228.6],
   };
 
-  const stepsHistoryByRange: Record<RangeKey, number[]> = {
+  const stepsHistoryByRange: Record<StepsRangeKey, number[]> = {
+    '1D': [stepsToday],
     '1W': [...STEPS_WEEK_SERIES],
     '1M': [2200, 3100, 4800, 5300, 6100, 7200, 6800, 4000, 5200, 7600],
-    '2M': [1800, 2400, 3300, 5100, 6000, 7000, 6600, 5400, 4200, 3900, 5800],
-    '3M': [1500, 2200, 3100, 4600, 5900, 7100, 6800, 6400, 5100, 4300, 3900],
-    '6M': [1600, 2400, 3200, 4000, 5200, 6100, 7200, 6900, 6500, 5800],
-    '1Y': [1200, 2000, 3100, 4200, 5200, 6500, 7400, 7000, 6600, 6100],
   };
 
   const weightSeries = weightHistoryByRange[weightRange];
@@ -1264,7 +1277,7 @@ export default function DashboardScreen() {
           </Pressable>
 
           {/* Steps - clickable */}
-          <Pressable onPress={() => setStepsModalOpen(true)} style={styles.bentoCard}>
+          <Pressable onPress={() => setStepsModalOpen(true)} style={[styles.bentoCard, styles.bentoWide, { padding: 18 }]}>
             <View style={styles.bentoHeader}>
               <View style={styles.bentoIconCircle}>
                 <Ionicons name="walk-outline" size={18} color={colors.text} />
@@ -1274,25 +1287,15 @@ export default function DashboardScreen() {
               <Ionicons name="chevron-forward" size={18} color={colors.subText} />
             </View>
 
-            <Text style={styles.bigMetric}>{stepsToday.toLocaleString()}</Text>
-            <Text style={styles.mutedMetric}>Today</Text>
+            <Text style={styles.bentoHint}>Your step count today</Text>
+
+            <Text style={[styles.bigMetric, { marginTop: 8 }]}>{stepsToday.toLocaleString()}</Text>
+            <Text style={[styles.mutedMetric, { marginTop: 6 }]}>Today</Text>
             {pedometerAvailable === false && (
-              <Text style={styles.mutedMetric}>Step tracking works on a physical phone in Expo Go.</Text>
+              <Text style={[styles.mutedMetric, { marginTop: 6 }]}>Step tracking works on a physical phone in Expo Go.</Text>
             )}
           </Pressable>
 
-          {/* Workouts */}
-          <View style={styles.bentoCard}>
-            <View style={styles.bentoHeader}>
-              <View style={styles.bentoIconCircle}>
-                <Ionicons name="barbell-outline" size={18} color={colors.text} />
-              </View>
-              <Text style={styles.bentoHeaderText}>Workouts</Text>
-            </View>
-
-            <Text style={styles.bigMetric}>{workouts}</Text>
-            <Text style={styles.mutedMetric}>This week</Text>
-          </View>
         </View>
 
         <View style={{ height: 24 }} />
@@ -1421,7 +1424,7 @@ export default function DashboardScreen() {
               </Text>
             )}
 
-            <RangeTabs value={stepsRange} onChange={setStepsRange} colors={colors} />
+            <RangeTabs value={stepsRange} onChange={setStepsRange} colors={colors} items={['1D', '1W', '1M']} />
 
             <SimpleLineChart data={stepsSeries} xLabels={stepsX} yUnit="steps" colors={colors} />
           </Pressable>

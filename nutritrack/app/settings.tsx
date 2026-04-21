@@ -114,7 +114,6 @@ export default function SettingsScreen() {
         <Row icon="trophy-outline" label="Goals & Progress" onPress={() => router.push('/goals' as never)} />
         <Row icon="people-outline" label="Friends" onPress={() => router.push('/(tabs)/friends' as never)} />
         <Row icon="restaurant-outline" label="Saved Foods, Meals & Recipes" />
-        <Row icon="card-outline" label="Subscription" />
       </View>
 
       {/* Preferences Section */}

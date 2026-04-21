@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { loadProfileFromFirestore } from '../lib/firestoreSync';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       const wGoalLbs  = wGoalLbsPair[1] ? parseFloat(wGoalLbsPair[1]) : null;
       const wGoalKg   = wGoalKgPair[1]  ? parseFloat(wGoalKgPair[1])  : null;
 
-      // Format height/weight/weightGoal based on stored units
       let heightText: string | null = null;
       let weightText: string | null = null;
       let weightGoalText: string | null = null;
@@ -135,11 +135,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         if (wGoalKg !== null && wGoalKg > 0) weightGoalText = `${wGoalKg} kg`;
       }
 
-      // DOB + age
       const dob = dobRaw ? formatDob(dobRaw) : null;
       const age = dobRaw ? calcAge(dobRaw)   : null;
 
-      // Auth-derived fields — read from current user if available
       const user = auth.currentUser;
       const email = user?.email ?? null;
       const memberSince = user?.metadata?.creationTime
@@ -161,7 +159,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         weightGoalKg:   wGoalKg  && wGoalKg  > 0 ? wGoalKg  : null,
         weightGoalLbs:  wGoalLbs && wGoalLbs > 0 ? wGoalLbs : null,
         weightGoalText,
-        // Streak values are placeholders until persistent logging is implemented
         activeStreak: 0,
         longestStreak: 0,
         totalTrackedDays: 0,
@@ -171,9 +168,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load on mount + whenever Firebase auth state resolves
+  // On auth state change: pull from Firestore first (so local cache is fresh), then load into state
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, () => { load(); });
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Pull cloud data into AsyncStorage, then load into state
+        await loadProfileFromFirestore(user.uid).catch(() => {});
+      }
+      await load();
+    });
     return unsub;
   }, [load]);
 
