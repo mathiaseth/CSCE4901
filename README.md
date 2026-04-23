@@ -18,21 +18,22 @@ A cross-platform mobile nutrition and fitness tracking app built with React Nati
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | React Native via Expo SDK 54 |
-| Router | Expo Router v6 (file-based, typed routes) |
-| Language | TypeScript |
-| Auth & DB | Firebase Authentication + Firestore |
-| Local Storage | AsyncStorage |
-| Nutrition API | USDA FoodData Central (REST) |
+| Layer         | Technology                                |
+| ------------- | ----------------------------------------- |
+| Framework     | React Native via Expo SDK 54              |
+| Router        | Expo Router v6 (file-based, typed routes) |
+| Language      | TypeScript                                |
+| Auth & DB     | Firebase Authentication + Firestore       |
+| Local Storage | AsyncStorage                              |
+| Nutrition API | USDA FoodData Central (REST)              |
 
 ## Getting Started
+
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/CSCE4901.git
+git clone https://github.com/<mathiaseth>/CSCE4901.git
 cd CSCE4901/nutritrack
 
 # Install dependencies
