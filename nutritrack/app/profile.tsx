@@ -20,6 +20,10 @@ import { auth } from '../lib/firebase';
 import { saveProfileToFirestore } from '../lib/firestoreSync';
 import { useAppTheme } from '../lib/theme';
 import { useProfile } from '../context/ProfileContext';
+import {
+  loadAccountProfileForCurrentUser,
+  saveAccountProfileForCurrentUser,
+} from '../lib/accountProfile';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,6 +113,9 @@ export default function ProfileScreen() {
 
   const loadProfile = async () => {
     try {
+      try {
+        await loadAccountProfileForCurrentUser({ syncToStorage: true });
+      } catch {}
       const [
         namePair, genderPair, dobPair, unitsPair,
         hFtPair, hInPair, hCmPair, wLbsPair, wKgPair,
@@ -334,18 +341,24 @@ function PersonalModal({ visible, colors, onClose, onSaved }: {
 
   useEffect(() => {
     if (!visible) return;
-    AsyncStorage.multiGet(['onboard.fullName', 'onboard.dob', 'onboard.gender']).then(([n, d, g]) => {
+    (async () => {
+      try {
+        await loadAccountProfileForCurrentUser({ syncToStorage: true });
+      } catch {}
+      const [n, d, g] = await AsyncStorage.multiGet(['onboard.fullName', 'onboard.dob', 'onboard.gender']);
       setFullName(n[1] ?? '');
       setGender(g[1] ?? '');
       if (d[1]) {
         const date = new Date(d[1]);
         if (!isNaN(date.getTime())) {
-          setDobInput(`${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`);
+          setDobInput(
+            `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`
+          );
         }
       } else {
         setDobInput('');
       }
-    });
+    })();
   }, [visible]);
 
   const handleSave = async () => {
@@ -365,6 +378,11 @@ function PersonalModal({ visible, colors, onClose, onSaved }: {
       ];
       if (dobIso) pairs.push(['onboard.dob', dobIso]);
       await AsyncStorage.multiSet(pairs);
+      await saveAccountProfileForCurrentUser({
+        fullName: fullName.trim(),
+        gender,
+        ...(dobIso ? { dob: dobIso } : {}),
+      });
       onSaved();
     } catch { Alert.alert('Error', 'Failed to save. Please try again.'); }
     finally { setSaving(false); }
@@ -413,11 +431,15 @@ function PhysicalModal({ visible, colors, onClose, onSaved }: {
 
   useEffect(() => {
     if (!visible) return;
-    AsyncStorage.multiGet([
-      'onboard.units', 'onboard.heightFt', 'onboard.heightIn',
-      'onboard.heightCm', 'onboard.weightLbs', 'onboard.weightKg',
-      'onboard.weightGoalLbs', 'onboard.weightGoalKg',
-    ]).then(([u, hFt, hIn, hCm, wLbs, wKg, wGLbs, wGKg]) => {
+    (async () => {
+      try {
+        await loadAccountProfileForCurrentUser({ syncToStorage: true });
+      } catch {}
+      const [u, hFt, hIn, hCm, wLbs, wKg, wGLbs, wGKg] = await AsyncStorage.multiGet([
+        'onboard.units', 'onboard.heightFt', 'onboard.heightIn',
+        'onboard.heightCm', 'onboard.weightLbs', 'onboard.weightKg',
+        'onboard.weightGoalLbs', 'onboard.weightGoalKg',
+      ]);
       setUnits((u[1] ?? 'imperial') as 'imperial' | 'metric');
       setHeightFt(hFt[1] ?? '');
       setHeightIn(hIn[1] ?? '');
@@ -430,7 +452,7 @@ function PhysicalModal({ visible, colors, onClose, onSaved }: {
       setWeightGoalKg(gKg);
       prevGoalLbs.current = gLbs;
       prevGoalKg.current  = gKg;
-    });
+    })();
   }, [visible]);
 
   const doSave = async (overrideGoal?: string) => {
@@ -475,6 +497,17 @@ function PhysicalModal({ visible, colors, onClose, onSaved }: {
       ];
       if (overrideGoal) pairs.push(['onboard.goal', overrideGoal]);
       await AsyncStorage.multiSet(pairs);
+      await saveAccountProfileForCurrentUser({
+        units,
+        heightFt: String(saveHeightFt),
+        heightIn: String(saveHeightIn),
+        heightCm: String(saveHeightCm),
+        weightLbs: String(saveWeightLbs),
+        weightKg: String(saveWeightKg),
+        weightGoalLbs: String(saveGoalLbs),
+        weightGoalKg: String(saveGoalKg),
+        ...(overrideGoal ? { goal: overrideGoal } : {}),
+      });
       onSaved();
     } catch { Alert.alert('Error', 'Failed to save. Please try again.'); }
     finally { setSaving(false); }
@@ -605,10 +638,14 @@ function GoalModal({ visible, colors, onClose, onSaved }: {
 
   useEffect(() => {
     if (!visible) return;
-    AsyncStorage.multiGet(['onboard.goal', 'onboard.activity']).then(([g, a]) => {
+    (async () => {
+      try {
+        await loadAccountProfileForCurrentUser({ syncToStorage: true });
+      } catch {}
+      const [g, a] = await AsyncStorage.multiGet(['onboard.goal', 'onboard.activity']);
       setGoal(g[1] ?? '');
       setActivity(a[1] ?? '');
-    });
+    })();
   }, [visible]);
 
   const handleSave = async () => {
@@ -617,6 +654,7 @@ function GoalModal({ visible, colors, onClose, onSaved }: {
     setSaving(true);
     try {
       await AsyncStorage.multiSet([['onboard.goal', goal], ['onboard.activity', activity]]);
+      await saveAccountProfileForCurrentUser({ goal, activity });
       onSaved();
     } catch { Alert.alert('Error', 'Failed to save. Please try again.'); }
     finally { setSaving(false); }

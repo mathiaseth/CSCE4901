@@ -859,6 +859,7 @@ export default function DashboardScreen() {
   const [stepsToday, setStepsToday] = useState<number>(getStepsToday());
   const [pedometerAvailable, setPedometerAvailable] = useState<boolean | null>(null);
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
+  const stepsBaselineRef = useRef<number>(0);
   const [weekWeights] = useState<WeekWeight[]>([
     { day: 'Mon', value: 0 },
     { day: 'Tue', value: 0 },
@@ -1002,11 +1003,14 @@ export default function DashboardScreen() {
         const result = await Pedometer.getStepCountAsync(startOfDay, now);
 
         if (!mounted) return;
-        setStepsToday(result.steps ?? 0);
+        const initialSteps = result.steps ?? 0;
+        stepsBaselineRef.current = initialSteps;
+        setStepsToday(initialSteps);
 
         stepsSubscriptionRef.current = Pedometer.watchStepCount((result) => {
           if (!mounted) return;
-          setStepsToday((prev) => prev + result.steps);
+          // expo-sensors returns steps since watch start, so add to baseline instead of cumulative + prev
+          setStepsToday(stepsBaselineRef.current + (result.steps ?? 0));
         });
       } catch (error) {
         if (!mounted) return;

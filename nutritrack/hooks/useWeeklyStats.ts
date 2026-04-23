@@ -10,7 +10,8 @@ export function useWeeklyStats(
   totalCalories: number,
   waterTodayMl: number,
   waterGoalMl: number,
-  waterFromTrackerMl: number
+  waterFromTrackerMl: number,
+  stepsToday?: number
 ) {
   const [totals, setTotals] = useState<WeekTotals | null>(null);
 
@@ -28,7 +29,7 @@ export function useWeeklyStats(
       cancelled = true;
       clearTimeout(delayed);
     };
-  }, [loggedMealsCount, totalCalories, waterTodayMl, waterGoalMl, waterFromTrackerMl]);
+  }, [loggedMealsCount, totalCalories, waterTodayMl, waterGoalMl, waterFromTrackerMl, stepsToday]);
 
   return totals;
 }

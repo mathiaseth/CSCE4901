@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Pedometer } from 'expo-sensors';
 import { auth } from '../lib/firebase';
 import { useProfile } from '../context/ProfileContext';
 import { useNutrition } from '../context/NutritionContext';
@@ -8,7 +9,6 @@ import { upsertPublicUserProfile } from '../lib/social/userPublic';
 import { syncMyMetricsToFirestore } from '../lib/social/metrics';
 import { mergeTodaySnapshot, aggregateWeekMonSunNow } from '../lib/dailyStatsSnapshot';
 import {
-  getStepsToday,
   getWorkoutsToday,
   WORKOUTS_THIS_WEEK,
 } from '../lib/dashboardMetrics';
@@ -24,7 +24,10 @@ export function SocialMetricsSync() {
 
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   const [email, setEmail] = useState<string | null>(auth.currentUser?.email ?? null);
+  const [stepsToday, setStepsToday] = useState<number>(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stepSubRef = useRef<{ remove: () => void } | null>(null);
+  const stepBaselineRef = useRef<number>(0);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -32,6 +35,44 @@ export function SocialMetricsSync() {
       setEmail(u?.email ?? null);
     });
     return unsub;
+  }, []);
+
+  // Live physical-device steps (Expo Go on a real phone)
+  useEffect(() => {
+    let mounted = true;
+
+    const startPedometer = async () => {
+      try {
+        const available = await Pedometer.isAvailableAsync();
+        if (!mounted || !available) return;
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const now = new Date();
+        const initial = await Pedometer.getStepCountAsync(startOfDay, now);
+        if (!mounted) return;
+
+        const initialSteps = initial.steps ?? 0;
+        stepBaselineRef.current = initialSteps;
+        setStepsToday(initialSteps);
+
+        stepSubRef.current = Pedometer.watchStepCount((result) => {
+          if (!mounted) return;
+          setStepsToday(stepBaselineRef.current + (result.steps ?? 0));
+        });
+      } catch {
+        // Keep silent; sync continues with current state value.
+      }
+    };
+
+    startPedometer();
+
+    return () => {
+      mounted = false;
+      stepSubRef.current?.remove();
+      stepSubRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -53,7 +94,7 @@ export function SocialMetricsSync() {
           caloriesTotal: totalCalories,
           waterTotalMl,
           waterGoalMl,
-          steps: getStepsToday(),
+          steps: stepsToday,
           workoutsToday: getWorkoutsToday(),
         }).catch(() => {});
 
@@ -62,7 +103,7 @@ export function SocialMetricsSync() {
 
         await syncMyMetricsToFirestore(uid, {
           daily: {
-            stepsToday: getStepsToday(),
+            stepsToday,
             workoutsToday: getWorkoutsToday(),
             workoutsThisWeek: WORKOUTS_THIS_WEEK,
             mealsLoggedToday: loggedMealsCount,
@@ -92,6 +133,7 @@ export function SocialMetricsSync() {
     waterTodayMl,
     waterGoalMl,
     waterFromTrackerMl,
+    stepsToday,
   ]);
 
   return null;
