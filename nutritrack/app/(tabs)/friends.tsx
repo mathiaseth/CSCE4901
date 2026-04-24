@@ -21,10 +21,6 @@ import { useAppTheme } from '../../lib/theme';
 import { useProfile } from '../../context/ProfileContext';
 import { useNutrition } from '../../context/NutritionContext';
 import { useWater } from '../../context/WaterContext';
-import {
-  getWorkoutsToday,
-  WORKOUTS_THIS_WEEK,
-} from '../../lib/dashboardMetrics';
 import { useWeeklyStats } from '../../hooks/useWeeklyStats';
 import type { PublicUserDoc, FriendRequestDoc } from '../../lib/social/types';
 import {
@@ -39,7 +35,7 @@ import {
 } from '../../lib/social/friends';
 import { subscribeToPublicUsers } from '../../lib/social/watchUsers';
 
-type MetricKey = 'steps' | 'workouts' | 'meals' | 'hydration' | 'calories';
+type MetricKey = 'steps' | 'meals' | 'hydration' | 'calories';
 type PeriodKey = 'daily' | 'weekly';
 
 type LeaderRow = {
@@ -48,7 +44,6 @@ type LeaderRow = {
   initials: string;
   isYou: boolean;
   steps: number;
-  workouts: number;
   mealsLogged: number;
   hydrationScore: number;
   calories: number;
@@ -58,7 +53,6 @@ function metricLabel(metric: MetricKey, period: PeriodKey): string {
   if (period === 'daily') {
     const labels: Record<MetricKey, string> = {
       steps: 'Steps (today)',
-      workouts: 'Workouts (today)',
       meals: 'Meals logged (today)',
       hydration: 'Hydration (vs goal)',
       calories: 'Calories (today)',
@@ -67,7 +61,6 @@ function metricLabel(metric: MetricKey, period: PeriodKey): string {
   }
   const labels: Record<MetricKey, string> = {
     steps: 'Steps (weekly total)',
-    workouts: 'Workouts (weekly total)',
     meals: 'Meals logged (weekly total)',
     hydration: 'Hydration (daily avg. % for the week)',
     calories: 'Calories (weekly total)',
@@ -81,20 +74,18 @@ function pickFriendScores(doc: PublicUserDoc | null | undefined, period: PeriodK
     if (m && typeof m.stepsToday === 'number') {
       return {
         steps: m.stepsToday,
-        workouts: typeof m.workoutsToday === 'number' ? m.workoutsToday : 0,
         mealsLogged: m.mealsLoggedToday,
         hydrationScore: m.hydrationPct,
         calories: typeof m.caloriesToday === 'number' ? m.caloriesToday : 0,
       };
     }
-    return { steps: 0, workouts: 0, mealsLogged: 0, hydrationScore: 0, calories: 0 };
+    return { steps: 0, mealsLogged: 0, hydrationScore: 0, calories: 0 };
   }
 
   const w = doc?.metricsWeekly;
   if (w && typeof w.stepsWeekTotal === 'number') {
     return {
       steps: w.stepsWeekTotal,
-      workouts: w.workoutsWeekTotal ?? w.workoutsThisWeek ?? 0,
       mealsLogged: w.mealsLoggedSectionsWeekTotal ?? w.mealsWeekEstimate ?? 0,
       hydrationScore: w.hydrationWeekAvgPct ?? w.hydrationWeekPct ?? 0,
       calories: typeof w.caloriesWeekTotal === 'number' ? w.caloriesWeekTotal : 0,
@@ -103,21 +94,18 @@ function pickFriendScores(doc: PublicUserDoc | null | undefined, period: PeriodK
   if (m && typeof m.stepsToday === 'number') {
     return {
       steps: 0,
-      workouts: m.workoutsThisWeek,
       mealsLogged: 0,
       hydrationScore: m.hydrationPct,
       calories: 0,
     };
   }
-  return { steps: 0, workouts: 0, mealsLogged: 0, hydrationScore: 0, calories: 0 };
+  return { steps: 0, mealsLogged: 0, hydrationScore: 0, calories: 0 };
 }
 
 function scoreForMetric(row: LeaderRow, metric: MetricKey): number {
   switch (metric) {
     case 'steps':
       return row.steps;
-    case 'workouts':
-      return row.workouts;
     case 'meals':
       return row.mealsLogged;
     case 'hydration':
@@ -265,7 +253,6 @@ export default function FriendsScreen() {
         initials: profile.initials,
         isYou: true,
         steps: stepsToday,
-        workouts: getWorkoutsToday(),
         mealsLogged: loggedMealsCount,
         hydrationScore: hydrationYou,
         calories: totalCalories,
@@ -278,7 +265,6 @@ export default function FriendsScreen() {
       initials: profile.initials,
       isYou: true,
       steps: w?.stepsWeekTotal ?? 0,
-      workouts: w?.workoutsWeekTotal ?? WORKOUTS_THIS_WEEK,
       mealsLogged: w?.mealsLoggedSectionsWeekTotal ?? 0,
       hydrationScore: w?.hydrationWeekAvgPct ?? hydrationYou,
       calories: w?.caloriesWeekTotal ?? 0,
@@ -305,7 +291,6 @@ export default function FriendsScreen() {
         initials: doc?.initials || '?',
         isYou: false,
         steps: s.steps,
-        workouts: s.workouts,
         mealsLogged: s.mealsLogged,
         hydrationScore: s.hydrationScore,
         calories: s.calories,
@@ -545,7 +530,6 @@ export default function FriendsScreen() {
           {(
             [
               { key: 'steps' as const, icon: 'walk-outline' as const, label: 'Steps' },
-              { key: 'workouts' as const, icon: 'barbell-outline' as const, label: 'Workouts' },
               { key: 'meals' as const, icon: 'restaurant-outline' as const, label: 'Meals' },
               { key: 'hydration' as const, icon: 'water-outline' as const, label: 'Water' },
               { key: 'calories' as const, icon: 'flame-outline' as const, label: 'Calories' },

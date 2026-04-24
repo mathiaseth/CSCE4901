@@ -11,6 +11,8 @@ import {
   Pressable,
   Modal,
   Platform,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Line, Text as SvgText } from 'react-native-svg';
@@ -26,6 +28,15 @@ import { router } from 'expo-router';
 import { useProfile } from '../../context/ProfileContext';
 import { STEPS_WEEK_SERIES, getStepsToday } from '../../lib/dashboardMetrics';
 import { useActivityFeed } from '../../hooks/useActivityFeed';
+import { auth } from '../../lib/firebase';
+import { saveAccountProfileForCurrentUser } from '../../lib/accountProfile';
+import {
+  ensureStartWeight,
+  loadStartWeight,
+  loadWeightHistory,
+  type WeightEntry,
+  upsertTodayWeight,
+} from '../../lib/weightTracking';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -61,6 +72,21 @@ function computePercentChange(start: number, current: number) {
 function formatSignedPercent(p: number) {
   const sign = p > 0 ? '+' : '';
   return `${sign}${p.toFixed(1)}%`;
+}
+
+function dateKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function downsampleSeries(values: number[], maxPoints = 12): number[] {
+  if (values.length <= maxPoints) return values;
+  return Array.from({ length: maxPoints }, (_, i) => {
+    const idx = Math.round((i / (maxPoints - 1)) * (values.length - 1));
+    return values[idx];
+  });
 }
 
 function buildXLabels(range: RangeKey, points: number) {
@@ -398,6 +424,17 @@ function makeStyles(c: typeof LightColors) {
     },
     bentoHeaderText: { color: c.text, fontWeight: '900', fontSize: 16 },
     bentoHint: { color: c.subText, fontWeight: '700', marginBottom: 12 },
+    weightLogBtn: {
+      alignSelf: 'flex-start',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.background,
+      marginBottom: 12,
+    },
+    weightLogBtnText: { color: c.primary, fontWeight: '900', fontSize: 12 },
 
     weightRow: { flexDirection: 'row', justifyContent: 'space-between' },
     weightCol: { alignItems: 'center', gap: 6, flex: 1 },
@@ -852,7 +889,7 @@ export default function DashboardScreen() {
 
   const { colors } = useAppTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { profile: userProfile } = useProfile();
+  const { profile: userProfile, reload: reloadProfile } = useProfile();
   const { allItems, badgeCount } = useActivityFeed();
 
   const [caloriesBurned] = useState<number>(0);
@@ -860,24 +897,31 @@ export default function DashboardScreen() {
   const [pedometerAvailable, setPedometerAvailable] = useState<boolean | null>(null);
   const stepsSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const stepsBaselineRef = useRef<number>(0);
-  const [weekWeights] = useState<WeekWeight[]>([
-    { day: 'Mon', value: 0 },
-    { day: 'Tue', value: 0 },
-    { day: 'Wed', value: 0 },
-    { day: 'Thu', value: 0 },
-    { day: 'Fri', value: 0 },
-    { day: 'Sat', value: 0 },
-    { day: 'Sun', value: 0 },
-  ]);
+  const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([]);
+  const [startWeight, setStartWeight] = useState<{ weightKg: number; weightLbs: number } | null>(null);
 
   // ===== Modals + ranges =====
   const [weightModalOpen, setWeightModalOpen] = useState(false);
   const [stepsModalOpen, setStepsModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [weightInput, setWeightInput] = useState('');
+  const [savingWeight, setSavingWeight] = useState(false);
 
   const [weightRange, setWeightRange] = useState<WeightRangeKey>('1W');
   const [stepsRange, setStepsRange] = useState<StepsRangeKey>('1D');
+
+  useEffect(() => {
+    Promise.all([loadWeightHistory(), loadStartWeight()])
+      .then(([history, start]) => {
+        setWeightHistory(history);
+        setStartWeight(start);
+      })
+      .catch(() => {
+        setWeightHistory([]);
+        setStartWeight(null);
+      });
+  }, [userProfile.weightKg, userProfile.weightLbs, userProfile.units]);
 
   // ─── Calendar state ─────────────────────────────────────────────────────────
   const today = new Date();
@@ -918,17 +962,58 @@ export default function DashboardScreen() {
   const selectedCal     = calForDate(selectedDate);
   const selectedProtein = proteinForDate(selectedDate);
 
-  const startWeightSelected = 240;
-  const foodLoggingStreak = userProfile.activeStreak;
+  const weightUnit: 'lbs' | 'kg' = userProfile.units === 'metric' ? 'kg' : 'lbs';
+  const weightFallback =
+    weightUnit === 'kg'
+      ? (userProfile.weightKg ?? 0)
+      : (userProfile.weightLbs ?? 0);
 
-  const weightHistoryByRange: Record<WeightRangeKey, number[]> = {
-    '1W': [240, 239.6, 239.2, 239.0, 238.7, 238.9, 238.4],
-    '1M': [240, 239.2, 238.8, 238.1, 237.6, 237.0, 236.6, 236.2, 235.9, 235.6],
-    '2M': [240, 239.0, 238.0, 237.5, 236.8, 236.0, 235.5, 235.0, 234.6, 234.2, 233.9],
-    '3M': [240, 238.8, 237.9, 237.1, 236.2, 235.6, 235.0, 234.4, 233.8, 233.2, 232.8],
-    '6M': [240, 238.5, 237.0, 235.8, 234.7, 233.9, 232.8, 231.9, 231.0, 230.4],
-    '1Y': [240, 238.0, 236.2, 234.7, 233.2, 232.0, 230.8, 229.9, 229.1, 228.6],
-  };
+  const weekWeights = useMemo<WeekWeight[]>(() => {
+    const byDate = new Map(weightHistory.map((e) => [e.date, e]));
+    const ref = getWeekDays(new Date());
+    return ref.map((d) => {
+      const entry = byDate.get(dateKey(d));
+      const value = entry ? (weightUnit === 'kg' ? entry.weightKg : entry.weightLbs) : 0;
+      return {
+        day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        value,
+      };
+    });
+  }, [weightHistory, weightUnit]);
+
+  const weightSeriesByRange = useMemo<Record<WeightRangeKey, number[]>>(() => {
+    const now = new Date();
+    const daysByRange: Record<WeightRangeKey, number> = {
+      '1W': 7,
+      '1M': 30,
+      '2M': 60,
+      '3M': 90,
+      '6M': 180,
+      '1Y': 365,
+    };
+
+    const build = (days: number) => {
+      const start = new Date(now);
+      start.setDate(now.getDate() - (days - 1));
+      const list = weightHistory
+        .filter((e) => new Date(`${e.date}T00:00:00`) >= start)
+        .map((e) => (weightUnit === 'kg' ? e.weightKg : e.weightLbs));
+      const series = downsampleSeries(list);
+      if (series.length > 0) return series;
+      return weightFallback > 0 ? [weightFallback] : [0];
+    };
+
+    return {
+      '1W': build(daysByRange['1W']),
+      '1M': build(daysByRange['1M']),
+      '2M': build(daysByRange['2M']),
+      '3M': build(daysByRange['3M']),
+      '6M': build(daysByRange['6M']),
+      '1Y': build(daysByRange['1Y']),
+    };
+  }, [weightHistory, weightUnit, weightFallback]);
+
+  const foodLoggingStreak = userProfile.activeStreak;
 
   const stepsHistoryByRange: Record<StepsRangeKey, number[]> = {
     '1D': [stepsToday],
@@ -936,10 +1021,15 @@ export default function DashboardScreen() {
     '1M': [2200, 3100, 4800, 5300, 6100, 7200, 6800, 4000, 5200, 7600],
   };
 
-  const weightSeries = weightHistoryByRange[weightRange];
+  const weightSeries = weightSeriesByRange[weightRange];
   const weightX = buildXLabels(weightRange, weightSeries.length);
-  const currentWeight = weightSeries[weightSeries.length - 1] ?? startWeightSelected;
+  const startWeightSelected =
+    (startWeight
+      ? (weightUnit === 'kg' ? startWeight.weightKg : startWeight.weightLbs)
+      : null) ?? weightSeries[0] ?? weightFallback;
+  const currentWeight = weightSeries[weightSeries.length - 1] ?? weightFallback;
   const weightPct = computePercentChange(startWeightSelected, currentWeight);
+  const weightPlaceholder = weightUnit === 'kg' ? 'kg' : 'lbs';
 
   const stepsSeries = stepsHistoryByRange[stepsRange];
   const stepsX = buildXLabels(stepsRange, stepsSeries.length);
@@ -1028,6 +1118,52 @@ export default function DashboardScreen() {
   }, []);
 
   const todayLabel = formatDateLong(new Date());
+
+  useEffect(() => {
+    if (!profileModalOpen) return;
+    reloadProfile().catch(() => {});
+  }, [profileModalOpen, reloadProfile]);
+
+  useEffect(() => {
+    if (!weightModalOpen) return;
+    setWeightInput(currentWeight > 0 ? currentWeight.toFixed(1) : '');
+  }, [weightModalOpen, currentWeight]);
+
+  const handleQuickLogWeight = async () => {
+    const parsed = parseFloat(weightInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      Alert.alert('Invalid weight', `Enter a valid weight in ${weightPlaceholder}.`);
+      return;
+    }
+
+    const kg = weightUnit === 'kg' ? parsed : parsed * 0.453592;
+    const lbs = weightUnit === 'kg' ? parsed / 0.453592 : parsed;
+    const roundedKg = Math.round(kg * 10) / 10;
+    const roundedLbs = Math.round(lbs * 10) / 10;
+
+    setSavingWeight(true);
+    try {
+      await ensureStartWeight(roundedKg, roundedLbs);
+      await upsertTodayWeight(roundedKg, roundedLbs);
+      await saveAccountProfileForCurrentUser(
+        {
+          units: userProfile.units ?? 'imperial',
+          weightKg: String(roundedKg),
+          weightLbs: String(roundedLbs),
+        },
+        { syncToStorage: true }
+      );
+      await reloadProfile();
+      const [history, start] = await Promise.all([loadWeightHistory(), loadStartWeight()]);
+      setWeightHistory(history);
+      setStartWeight(start);
+      Alert.alert('Saved', 'Weight logged successfully.');
+    } catch {
+      Alert.alert('Error', 'Could not save weight. Please try again.');
+    } finally {
+      setSavingWeight(false);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -1265,6 +1401,9 @@ export default function DashboardScreen() {
             </View>
 
             <Text style={styles.bentoHint}>Trend over the last 7 days</Text>
+            <Pressable onPress={() => setWeightModalOpen(true)} style={styles.weightLogBtn}>
+              <Text style={styles.weightLogBtnText}>Log Weight</Text>
+            </Pressable>
 
             <View style={styles.weightRow}>
               {weekWeights.map((w) => (
@@ -1372,11 +1511,11 @@ export default function DashboardScreen() {
             <View style={styles.statRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Start</Text>
-                <Text style={styles.statValue}>{startWeightSelected.toFixed(1)} lbs</Text>
+                <Text style={styles.statValue}>{startWeightSelected.toFixed(1)} {weightUnit}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Current</Text>
-                <Text style={styles.statValue}>{currentWeight.toFixed(1)} lbs</Text>
+                <Text style={styles.statValue}>{currentWeight.toFixed(1)} {weightUnit}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Change</Text>
@@ -1386,7 +1525,45 @@ export default function DashboardScreen() {
 
             <RangeTabs value={weightRange} onChange={setWeightRange} colors={colors} />
 
-            <SimpleLineChart data={weightSeries} xLabels={weightX} yUnit="lbs" colors={colors} />
+            <View style={{ marginBottom: 12 }}>
+              <Text style={[styles.statLabel, { marginBottom: 8 }]}>Log today&apos;s weight ({weightUnit})</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                  placeholder={weightPlaceholder}
+                  placeholderTextColor={colors.subText}
+                  keyboardType="decimal-pad"
+                  style={{
+                    flex: 1,
+                    height: 42,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    paddingHorizontal: 12,
+                    color: colors.text,
+                    fontWeight: '800',
+                  }}
+                />
+                <Pressable
+                  onPress={handleQuickLogWeight}
+                  disabled={savingWeight || !auth.currentUser}
+                  style={{
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.primary,
+                    opacity: savingWeight || !auth.currentUser ? 0.6 : 1,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '900' }}>{savingWeight ? 'Saving…' : 'Save'}</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <SimpleLineChart data={weightSeries} xLabels={weightX} yUnit={weightUnit} colors={colors} />
           </Pressable>
         </Pressable>
       </Modal>

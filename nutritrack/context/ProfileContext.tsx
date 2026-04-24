@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import {
+  loadAccountProfileForCurrentUser,
+  readOnboardingDataFromStorage,
+  saveAccountProfileForCurrentUser,
+} from '../lib/accountProfile';
+import { loadProfileFromFirestore } from '../lib/firestoreSync';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

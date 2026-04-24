@@ -20,6 +20,7 @@ import { auth } from '../lib/firebase';
 import { saveProfileToFirestore } from '../lib/firestoreSync';
 import { useAppTheme } from '../lib/theme';
 import { useProfile } from '../context/ProfileContext';
+import { ensureStartWeight, upsertTodayWeight } from '../lib/weightTracking';
 import {
   loadAccountProfileForCurrentUser,
   saveAccountProfileForCurrentUser,
@@ -508,6 +509,8 @@ function PhysicalModal({ visible, colors, onClose, onSaved }: {
         weightGoalKg: String(saveGoalKg),
         ...(overrideGoal ? { goal: overrideGoal } : {}),
       });
+      await ensureStartWeight(saveWeightKg, saveWeightLbs);
+      await upsertTodayWeight(saveWeightKg, saveWeightLbs);
       onSaved();
     } catch { Alert.alert('Error', 'Failed to save. Please try again.'); }
     finally { setSaving(false); }
